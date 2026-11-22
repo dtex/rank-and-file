@@ -33,7 +33,19 @@ export async function fetchMonth(username, key, etag, fetchImpl = fetch) {
   const [y, m] = key.split('-')
   const res = await get(`${BASE}/player/${encodeURIComponent(username.toLowerCase())}/games/${y}/${m}`, etag, fetchImpl)
   if (res.notModified) return res
-  return { etag: res.etag, games: (res.body.games || []).map(trimGame) }
+  return { etag: res.etag, games: (res.body.games || []).filter((g) => isFinished(g)).map(trimGame) }
+}
+
+/**
+ * True only for a game that is over. The monthly archive should hold nothing
+ * else, but this is the guard that keeps a game still being played out of the
+ * app, where its opening advice would be help during the game.
+ */
+export function isFinished(raw, now = Date.now() / 1000) {
+  if (!raw || !Number.isFinite(raw.end_time) || raw.end_time > now) return false
+  if (!raw.white?.result || !raw.black?.result) return false
+  const result = raw.pgn?.match(/^\[Result "([^"]*)"\]/m)?.[1]
+  return result !== '*'
 }
 
 /** Pull the SAN moves out of a chess.com PGN, dropping headers, clocks and move numbers. */
