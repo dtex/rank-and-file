@@ -1,0 +1,77 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { buildApp } from '../app.js'
+import { withLock } from '../services/store.js'
+import { testPool, testStore } from './helpers/db.js'
+
+const game = (uuid, end, over = {}) => ({
+  uuid, url: `https://www.chess.com/game/live/${uuid}`, end, rated: true, timeClass: 'blitz', timeControl: '300', rules: 'chess',
+  white: { name: 'me', rating: 800, result: 'win' }, black: { name: 'them', rating: 800, result: 'resigned' }, moves: ['e4', 'e5'], ...over,
+})
+
+test('a new user starts with empty progress, and saved progress comes back', async () => {
+  const { store } = await testStore()
+  const p = await store.loadProgress()
+  assert.deepEqual(p.missions, {})
+  p.settings.username = 'me'
+  p.missions.kp = { status: 'active', side: 'w', startedAt: 1, games: [] }
+  await store.saveProgress(p)
+  assert.deepEqual(await store.loadProgress(), p)
+})
+
+test('games are stored once, oldest first, and keep their verdicts', async () => {
+  const { store } = await testStore()
+  const first = await store.saveMonth('2026-10', [game('b', 200), game('a', 100)], 'etag-1')
+  assert.deepEqual(first.map((g) => g.uuid), ['b', 'a'])
+  const again = await store.saveMonth('2026-10', [game('a', 100), game('c', 300, { verdict: { type: 'history' } })], 'etag-2')
+  assert.deepEqual(again.map((g) => g.uuid), ['c'])
+  assert.deepEqual(await store.loadMonths(), { '2026-10': 'etag-2' })
+
+  const all = await store.loadAllGames()
+  assert.deepEqual(all.map((g) => g.uuid), ['a', 'b', 'c'])
+  assert.equal('verdict' in all[0], false, 'an unjudged game has no verdict')
+  assert.deepEqual(all[2].verdict, { type: 'history' })
+
+  all[0].verdict = { type: 'counted', node: 'kp' }
+  await store.saveVerdicts([all[0]])
+  assert.deepEqual((await store.loadAllGames())[0].verdict, { type: 'counted', node: 'kp' })
+})
+
+test('one user never sees or resets another user\'s data', async () => {
+  const a = await testStore()
+  const b = await testStore()
+  await a.store.saveMonth('2026-10', [game('shared', 100)], 'ea')
+  await b.store.saveMonth('2026-10', [game('shared', 100)], 'eb')
+  const pa = await a.store.loadProgress()
+  pa.settings.username = 'alice'
+  await a.store.saveProgress(pa)
+
+  await b.store.reset()
+  assert.equal((await b.store.loadAllGames()).length, 0)
+  assert.deepEqual(await b.store.loadMonths(), {})
+  assert.equal((await a.store.loadAllGames()).length, 1)
+  assert.equal((await a.store.loadProgress()).settings.username, 'alice')
+})
+
+test('withLock runs work for one key in order and survives a failure', async () => {
+  const seen = []
+  const slow = withLock('k', async () => { await new Promise((r) => setTimeout(r, 20)); seen.push(1) })
+  const fails = withLock('k', async () => { seen.push(2); throw new Error('boom') })
+  const last = withLock('k', async () => { seen.push(3); return 'ok' })
+  await slow
+  await assert.rejects(fails, /boom/)
+  assert.equal(await last, 'ok')
+  assert.deepEqual(seen, [1, 2, 3])
+})
+
+test('the API serves state and settings from the database', async () => {
+  const pool = await testPool()
+  const app = buildApp({ pool, logger: false })
+  const state = await app.inject({ url: '/api/state' })
+  assert.equal(state.statusCode, 200)
+  assert.ok(state.json().nodes.length >= 1)
+  const settings = await app.inject({ url: '/api/settings' })
+  assert.equal(settings.statusCode, 200)
+  assert.ok(Array.isArray(settings.json().settings.timeClasses))
+  await app.close()
+})

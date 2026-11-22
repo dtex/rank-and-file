@@ -10,6 +10,7 @@ the map comes out of the fog.
 
 ```
 npm install
+npm run migrate    # creates the local Postgres database
 npm start          # builds the front end, then serves http://localhost:3210
 npm test
 ```
@@ -27,10 +28,12 @@ The scoring uses the `checks` next to each opening's `ideas` in `data/tree.json`
 `services/checks.js`; `npm run tree:check` validates it. Ideas that did not come up in a game, or
 that the game ended too soon to judge, are left out of that game's score.
 
-Everything the app remembers is in `data/`:
+## Storage
 
-- `data/tree.json` – the opening flowchart
-- `data/progress.json` – settings, missions and what you have uncovered
-- `data/games/YYYY-MM.json` – your games, trimmed to the first 30 plies
+Progress and games live in a local Postgres database (`chess_buddy` by default; set `DATABASE_URL`
+to use another). `npm start` applies any pending migrations from `migrations/`; `npm run migrate`
+does the same and creates the database first if it is missing. Tests use `chess_buddy_test`.
 
-Commit and push `data/` (or use **Save to GitHub** in the app) to back up your progress.
+`data/tree.json` is the opening flowchart and stays in the repository.
+
+To bring over the JSON files an older version kept in `data/`, run `npm run import-data -- path/to/data`.

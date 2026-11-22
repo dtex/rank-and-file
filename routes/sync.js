@@ -1,13 +1,16 @@
 import { runSync } from '../services/engine.js'
 
-let running = null
+/** One sync per user at a time; a second click joins the one already running. */
+const running = new Map()
 
 export default async function syncRoutes(app) {
-  // One sync at a time; a second click joins the one already running.
   app.post('/api/sync', async (req, reply) => {
+    const { store, fetchImpl } = req.cb
     try {
-      running ??= runSync(app.ctx).finally(() => { running = null })
-      return await running
+      if (!running.has(store.userId)) {
+        running.set(store.userId, runSync({ store, fetchImpl }).finally(() => running.delete(store.userId)))
+      }
+      return await running.get(store.userId)
     } catch (err) {
       req.log.error(err)
       return reply.code(502).send({ error: err.message })

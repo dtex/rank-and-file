@@ -1,10 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import fs from 'node:fs'
-import os from 'node:os'
-import path from 'node:path'
 import { fetchMonth, isFinished, parseMoves, trimGame } from '../services/chesscom.js'
-import { createStore } from '../services/store.js'
+import { testStore } from './helpers/db.js'
 import { pullGames } from '../services/sync.js'
 
 const PGN = `[Event "Live Chess"]
@@ -68,7 +65,7 @@ function fakeChessCom(months) {
 }
 
 test('pullGames stores new games once and skips unchanged months', async () => {
-  const store = createStore(fs.mkdtempSync(path.join(os.tmpdir(), 'cb-')))
+  const { store } = await testStore()
   const months = {
     '2026-09': [raw({ uuid: 'a', end_time: 1750000000 })],
     '2026-10': [raw({ uuid: 'b', end_time: 1752000000 })],
@@ -83,5 +80,5 @@ test('pullGames stores new games once and skips unchanged months', async () => {
   const second = await pullGames({ store, username: 'dtexus', fetchImpl: api.impl })
   assert.deepEqual(second.map((g) => g.uuid), ['d'])
   assert.equal(api.calls.some((u) => u.endsWith('2026/09')), false, 'old months are not refetched')
-  assert.equal(store.loadAllGames().length, 4)
+  assert.equal((await store.loadAllGames()).length, 4)
 })

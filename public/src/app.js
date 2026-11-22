@@ -16,7 +16,6 @@ class CbApp extends View {
     notice: { state: true },
     fresh: { state: true },
     version: { state: true },
-    saving: { state: true },
   }
 
   constructor() {
@@ -75,18 +74,6 @@ class CbApp extends View {
       this.notice = { err: true, text: `Sync failed. ${err.message}` }
     } finally {
       this.syncing = false
-    }
-  }
-
-  async save() {
-    this.saving = true
-    try {
-      const r = await api('/api/save', { method: 'POST' })
-      this.notice = { err: !r.pushed, text: r.message }
-    } catch (err) {
-      this.notice = { err: true, text: `Save failed. ${err.message}` }
-    } finally {
-      this.saving = false
     }
   }
 
@@ -184,7 +171,6 @@ class CbApp extends View {
         <span class="sp"></span>
         ${this.state ? html`<span class="muted">${this.state.username} · synced ${ago(this.state.lastSync)}</span>` : nothing}
         <button ?disabled=${this.syncing} @click=${() => this.sync()}>${this.syncing ? 'Checking…' : 'Check for new games'}</button>
-        <button ?disabled=${this.saving} @click=${() => this.save()}>${this.saving ? 'Saving…' : 'Save to GitHub'}</button>
       </header>
       ${this.notice
         ? html`<div class="notice ${this.notice.err ? 'err' : ''}" role="status"><span>${this.notice.text}</span><span class="sp"></span>

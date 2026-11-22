@@ -1,10 +1,6 @@
-// JSON-file storage. Everything the app remembers lives under data/ so a git
-// commit is the backup.
-import fs from 'node:fs'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+// Postgres storage. Everything a user's missions depend on is reached through
+// a store bound to that user, so one user's request can never touch another's rows.
+import { withTx } from './db.js'
 
 export const DEFAULT_SETTINGS = {
   username: 'dtexus',
@@ -13,95 +9,86 @@ export const DEFAULT_SETTINGS = {
   adviceThreshold: 70,
 }
 
-export function createStore(dir = process.env.CB_DATA_DIR || path.join(ROOT, 'data')) {
-  const gamesDir = path.join(dir, 'games')
-  fs.mkdirSync(gamesDir, { recursive: true })
-
-  function readJson(file, fallback) {
-    try {
-      return JSON.parse(fs.readFileSync(file, 'utf8'))
-    } catch (err) {
-      if (err.code === 'ENOENT') return fallback
-      throw new Error(`Could not read ${file}: ${err.message}`)
-    }
-  }
-
-  function writeJson(file, value, { compactRows = false } = {}) {
-    // Month files keep one game per line so git diffs stay readable.
-    const body = compactRows && Array.isArray(value)
-      ? '[\n' + value.map((v) => JSON.stringify(v)).join(',\n') + '\n]\n'
-      : JSON.stringify(value, null, 2) + '\n'
-    const tmp = `${file}.tmp`
-    fs.writeFileSync(tmp, body)
-    fs.renameSync(tmp, file)
-  }
-
-  const progressFile = path.join(dir, 'progress.json')
-  const metaFile = path.join(gamesDir, '_meta.json')
-  const monthFile = (key) => path.join(gamesDir, `${key}.json`)
-
+export function newProgress(now = Math.floor(Date.now() / 1000)) {
   return {
-    dir,
-    loadProgress() {
-      const p = readJson(progressFile, null)
-      if (p) return p
+    version: 1,
+    createdAt: now,
+    settings: structuredClone(DEFAULT_SETTINGS),
+    missions: {},
+    slots: { w: null, b: null },
+    events: [],
+    lastSync: null,
+  }
+}
+
+const toGame = (row) => (row.verdict ? { ...row.data, verdict: row.verdict } : row.data)
+
+export function createStore(pool) {
+  return {
+    pool,
+    /** The storage of one user. */
+    forUser(userId) {
       return {
-        version: 1,
-        createdAt: Math.floor(Date.now() / 1000),
-        settings: structuredClone(DEFAULT_SETTINGS),
-        missions: {},
-        slots: { w: null, b: null },
-        events: [],
-        lastSync: null,
-      }
-    },
-    saveProgress(p) {
-      writeJson(progressFile, p)
-    },
-    loadMeta() {
-      return readJson(metaFile, { etags: {} })
-    },
-    saveMeta(meta) {
-      writeJson(metaFile, meta)
-    },
-    listMonths() {
-      return fs
-        .readdirSync(gamesDir)
-        .filter((f) => /^\d{4}-\d{2}\.json$/.test(f))
-        .map((f) => f.slice(0, 7))
-        .sort()
-    },
-    loadMonth(key) {
-      return readJson(monthFile(key), [])
-    },
-    saveMonth(key, games) {
-      games.sort((a, b) => a.end - b.end)
-      writeJson(monthFile(key), games, { compactRows: true })
-    },
-    /** Delete every stored game and all progress. Used when the username changes. */
-    reset() {
-      for (const key of this.listMonths()) fs.rmSync(monthFile(key))
-      fs.rmSync(metaFile, { force: true })
-      fs.rmSync(progressFile, { force: true })
-    },
-    /** Every stored game, oldest first. */
-    loadAllGames() {
-      const all = []
-      for (const key of this.listMonths()) all.push(...this.loadMonth(key))
-      return all.sort((a, b) => a.end - b.end)
-    },
-    /** Write back a set of changed games, grouped into their month files. */
-    saveGames(games) {
-      const byMonth = new Map()
-      for (const g of games) {
-        const key = monthKey(g.end)
-        if (!byMonth.has(key)) byMonth.set(key, [])
-        byMonth.get(key).push(g)
-      }
-      for (const [key, changed] of byMonth) {
-        const existing = new Map(this.loadMonth(key).map((g) => [g.uuid, g]))
-        for (const g of changed) existing.set(g.uuid, g)
-        this.saveMonth(key, [...existing.values()])
+        userId,
+        async loadProgress() {
+          const { rows } = await pool.query('select data from progress where user_id = $1', [userId])
+          return rows[0]?.data ?? newProgress()
+        },
+        async saveProgress(p) {
+          await pool.query(
+            `insert into progress (user_id, data) values ($1, $2)
+             on conflict (user_id) do update set data = excluded.data, updated_at = now()`,
+            [userId, JSON.stringify(p)],
+          )
+        },
+        /** Months already fetched from chess.com, as { '2026-11': etag | null }. */
+        async loadMonths() {
+          const { rows } = await pool.query('select month, etag from archive_months where user_id = $1', [userId])
+          return Object.fromEntries(rows.map((r) => [r.month, r.etag]))
+        },
+        /** Record a fetched month. Returns the games that were not stored before. */
+        async saveMonth(month, games, etag = null) {
+          return withTx(pool, async (db) => {
+            const added = []
+            for (const g of games) {
+              const { verdict = null, ...data } = g
+              const res = await db.query(
+                `insert into games (user_id, uuid, ended_at, data, verdict) values ($1, $2, $3, $4, $5)
+                 on conflict (user_id, uuid) do nothing`,
+                [userId, g.uuid, g.end, JSON.stringify(data), verdict && JSON.stringify(verdict)],
+              )
+              if (res.rowCount) added.push(g)
+            }
+            await db.query(
+              `insert into archive_months (user_id, month, etag) values ($1, $2, $3)
+               on conflict (user_id, month) do update set etag = coalesce(excluded.etag, archive_months.etag)`,
+              [userId, month, etag],
+            )
+            return added
+          })
+        },
+        /** Every stored game, oldest first. */
+        async loadAllGames() {
+          const { rows } = await pool.query('select data, verdict from games where user_id = $1 order by ended_at, uuid', [userId])
+          return rows.map(toGame)
+        },
+        /** Write back the verdicts of games that have just been judged. */
+        async saveVerdicts(games) {
+          if (!games.length) return
+          await withTx(pool, async (db) => {
+            for (const g of games) {
+              await db.query('update games set verdict = $3 where user_id = $1 and uuid = $2', [userId, g.uuid, JSON.stringify(g.verdict)])
+            }
+          })
+        },
+        /** Delete every stored game and all progress. Used when the username changes. */
+        async reset() {
+          await withTx(pool, async (db) => {
+            await db.query('delete from games where user_id = $1', [userId])
+            await db.query('delete from archive_months where user_id = $1', [userId])
+            await db.query('delete from progress where user_id = $1', [userId])
+          })
+        },
       }
     },
   }
@@ -110,4 +97,15 @@ export function createStore(dir = process.env.CB_DATA_DIR || path.join(ROOT, 'da
 export function monthKey(unixSeconds) {
   const d = new Date(unixSeconds * 1000)
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+}
+
+/** Serialise work per key, so two requests from one user cannot interleave their read-change-write. */
+const chains = new Map()
+export function withLock(key, fn) {
+  const prev = chains.get(key) ?? Promise.resolve()
+  const run = prev.then(fn, fn)
+  const tail = run.catch(() => {})
+  chains.set(key, tail)
+  tail.then(() => chains.get(key) === tail && chains.delete(key))
+  return run
 }

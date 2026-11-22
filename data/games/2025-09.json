@@ -1,3 +1,0 @@
-[
-{"uuid":"7e5ccf03-8a9f-11f0-9cc8-0b52fe01000f","url":"https://www.chess.com/game/live/142774091792","end":1757108377,"rated":true,"timeClass":"rapid","timeControl":"600","rules":"chess","white":{"name":"dtexus","rating":345,"result":"win"},"black":{"name":"Slasus2009","rating":231,"result":"abandoned"},"moves":["e4","d5","d4","dxe4","Bc4","Be6","Bb5+","c6","Ba4","b5","Bb3","Bxb3","cxb3","c5","dxc5","Qa5+","Nd2","Nc6","Kf1","O-O-O","Ne2","e6","Nxe4","Nd4","Nxd4","e5","Nc6","Rxd1+","Ke2","Qc7"],"verdict":{"type":"history"}}
-]

@@ -1,3 +1,0 @@
-[
-{"uuid":"b1ee3ea9-64e3-11f0-9740-f690a301000f","url":"https://www.chess.com/game/live/140884938970","end":1752959725,"rated":true,"timeClass":"rapid","timeControl":"600","rules":"chess","white":{"name":"doublel8888","rating":398,"result":"win"},"black":{"name":"dtexus","rating":220,"result":"checkmated"},"moves":["e4","e5","Qf3","Nf6","Nc3","Nc6","d3","Nb4","Bg5","Nxc2+","Kd1","Nxa1","Bxf6","gxf6","Be2","Bb4","Nd5","c6","Nxb4","c5","Nd5","Qa5","Nxf6+","Kf8","Nh3","Qxa2","Kd2","Qxb2+","Ke3","Nc2+"],"verdict":{"type":"history"}}
-]
