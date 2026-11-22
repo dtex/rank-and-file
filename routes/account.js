@@ -1,6 +1,7 @@
 // The signed-in user's own account: consent, email, data export and deletion.
 import { CONSENT_TEXT, LINK_MINUTES, POLICY_VERSION, isEmail, normalizeEmail } from '../services/accounts.js'
 import { linkEmail } from '../services/mailer.js'
+import { planView } from '../services/views.js'
 import { SESSION_COOKIE } from './auth.js'
 
 export default async function accountRoutes(app) {
@@ -17,6 +18,7 @@ export default async function accountRoutes(app) {
       methods: await accounts.methods(u.id),
       policyVersion: POLICY_VERSION,
       consentText: CONSENT_TEXT,
+      plan: planView(req.cb.plan),
     }
   })
 

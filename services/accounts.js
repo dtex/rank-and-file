@@ -155,6 +155,7 @@ export function createAccounts(pool, { secret }) {
         signInMethods: await one('select provider, created_at from identities where user_id = $1 order by created_at'),
         consents: await one('select kind, granted, version, source, at from consents where user_id = $1 order by at, id'),
         sessions: await one('select created_at, last_seen_at, expires_at from sessions where user_id = $1 order by created_at'),
+        gifts: await one('select days, note, created_at, redeemed_at, expires_at, revoked_at from gifts where redeemed_by = $1 order by created_at'),
         progress: progress?.data ?? null,
         games: (await one('select data, verdict from games where user_id = $1 order by ended_at, uuid')).map((r) => ({ ...r.data, verdict: r.verdict })),
       }
@@ -164,7 +165,10 @@ export function createAccounts(pool, { secret }) {
     async deleteAccount(userId) {
       await withTx(pool, async (db) => {
         const { rows } = await db.query('select email from users where id = $1', [userId])
-        if (rows[0]?.email) await db.query('delete from login_tokens where email = $1', [rows[0].email])
+        if (rows[0]?.email) {
+          await db.query('delete from login_tokens where email = $1', [rows[0].email])
+          await db.query('delete from gifts where email = $1', [rows[0].email])
+        }
         await db.query('delete from users where id = $1', [userId])
       })
     },

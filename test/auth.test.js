@@ -93,7 +93,7 @@ async function oauth(c, provider, code) {
 
 test('Google and GitHub sign in by verified email, and the same email is the same account', async () => {
   const email = uniqueEmail('linked')
-  const providers = fakeProviders({ gcode: { sub: `g-${email}`, email, verified: true }, hcode: { sub: 4242, email: email.toUpperCase(), verified: true } })
+  const providers = fakeProviders({ gcode: { sub: `g-${email}`, email, verified: true }, hcode: { sub: `h-${email}`, email: email.toUpperCase(), verified: true } })
   const ctx = await testApp({ fetchImpl: providers.impl })
 
   const g = client(ctx.app)
@@ -120,7 +120,7 @@ test('Google and GitHub sign in by verified email, and the same email is the sam
 
 test('sign-in is refused without a verified email, a matching state, or a good code', async () => {
   const email = uniqueEmail('unverified')
-  const providers = fakeProviders({ gcode: { sub: 'g-unverified', email, verified: false }, hcode: { sub: 77, email, verified: false } })
+  const providers = fakeProviders({ gcode: { sub: `g-${email}`, email, verified: false }, hcode: { sub: `h-${email}`, email, verified: false } })
   const ctx = await testApp({ fetchImpl: providers.impl })
 
   for (const [provider, code] of [['google', 'gcode'], ['github', 'hcode']]) {

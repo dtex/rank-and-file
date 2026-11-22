@@ -1,12 +1,13 @@
 import { adviceThreshold } from '../services/advice.js'
 import { locked } from '../services/engine.js'
+import { planView } from '../services/views.js'
 
 const TIME_CLASSES = ['bullet', 'blitz', 'rapid', 'daily']
 
 export default async function settingsRoutes(app) {
   app.get('/api/settings', async (req) => {
     const p = await req.cb.store.loadProgress()
-    return { settings: { ...p.settings, adviceThreshold: adviceThreshold(p.settings) }, timeClassOptions: TIME_CLASSES, lastSync: p.lastSync }
+    return { settings: { ...p.settings, adviceThreshold: adviceThreshold(p.settings) }, timeClassOptions: TIME_CLASSES, lastSync: p.lastSync, plan: planView(req.cb.plan, p) }
   })
 
   app.put('/api/settings', (req, reply) => locked(req.cb.store, async () => {

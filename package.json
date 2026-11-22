@@ -12,6 +12,7 @@
     "migrate": "node scripts/migrate.js",
     "import-data": "node scripts/import-data.js",
     "claim": "node scripts/claim-account.js",
+    "gift": "node scripts/gift.js",
     "tree:check": "node scripts/build-tree.js"
   },
   "engines": {

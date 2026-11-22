@@ -1,7 +1,7 @@
 // Shapes data for the browser. Nothing about a hidden opening leaves the server
 // except that it exists, which colour owns it, and what it hangs off.
 import { createHash } from 'node:crypto'
-import { candidates, isUncovered } from './missions.js'
+import { FREE_OPENINGS, candidates, isUncovered, uncoveredCount } from './missions.js'
 import { ADVICE_WINDOW, adviceHistory, adviceThreshold, average, gameAdvice, missionRows } from './advice.js'
 import { deepestNode, deviation, formatMove, ineligibleReason, reached, userResult, userSide } from './matcher.js'
 
@@ -116,7 +116,18 @@ function missedIdeas(node, history) {
     .sort((a, b) => a.followed / a.of - b.followed / b.of)
 }
 
-export function stateView(tree, progress, games) {
+/** The plan as the browser needs it. `limit` is null when there is none. */
+export function planView(plan, progress = null) {
+  const out = { subscribed: plan.subscribed, source: plan.source, until: plan.until, limit: plan.subscribed ? null : plan.limit, freeOpenings: FREE_OPENINGS }
+  if (progress) {
+    out.uncovered = uncoveredCount(progress)
+    out.atLimit = !plan.subscribed && out.uncovered >= plan.limit
+    out.locked = Object.values(progress.missions).filter((m) => m.status === 'locked').length
+  }
+  return out
+}
+
+export function stateView(tree, progress, games, plan = { subscribed: true, source: null, until: null, limit: Infinity }) {
   const nodes = [nodeView(tree.root, progress)]
   for (const n of tree.nodes) if (isUncovered(progress, n.id)) nodes.push(nodeView(n, progress))
   const fog = candidates(tree, progress).map((n) => ({ fid: fogId(n.id), parent: n.parent, side: n.side }))
@@ -135,11 +146,12 @@ export function stateView(tree, progress, games) {
 
   // Advice missions run beside the two opening missions.
   missions.advice = tree.nodes
-    .filter((n) => progress.advice?.missions[n.id]?.status === 'active')
+    .filter((n) => isUncovered(progress, n.id) && progress.advice?.missions[n.id]?.status === 'active')
     .map((n) => ({ ...nodeView(n, progress), ...adviceMissionView(n, progress, adviceHistory(tree, progress, games, n)) }))
 
   const events = progress.events
-    .filter((e) => !e.seen)
+    // An event about an opening that has since been locked would name it.
+    .filter((e) => !e.seen && isUncovered(progress, e.node) && (!e.next || isUncovered(progress, e.next)))
     .map((e) => {
       if (e.type !== 'completed') {
         const node = tree.byId.get(e.node)
@@ -152,6 +164,7 @@ export function stateView(tree, progress, games) {
         type: e.type,
         at: e.at,
         node: nodeView(tree.byId.get(e.node), progress),
+        paywall: !!e.paywall && !plan.subscribed,
         next: next && {
           ...nodeView(next, progress),
           blurb: next.blurb,
@@ -166,6 +179,7 @@ export function stateView(tree, progress, games) {
     username: progress.settings.username,
     adviceThreshold: adviceThreshold(progress.settings),
     lastSync: progress.lastSync,
+    plan: planView(plan, progress),
     nodes,
     fog,
     missions,

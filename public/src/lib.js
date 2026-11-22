@@ -58,6 +58,10 @@ export function day(unix) {
   return new Date(unix * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
 }
 
+export function longDay(unix) {
+  return new Date(unix * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
 export const resultWord = { win: 'Win', loss: 'Loss', draw: 'Draw' }
 
 /** Advice accuracy as a chip: green at or above the target, red below. */

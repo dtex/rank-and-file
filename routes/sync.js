@@ -5,10 +5,10 @@ const running = new Map()
 
 export default async function syncRoutes(app) {
   app.post('/api/sync', async (req, reply) => {
-    const { store, fetchImpl } = req.cb
+    const { store, fetchImpl, plan } = req.cb
     try {
       if (!running.has(store.userId)) {
-        running.set(store.userId, runSync({ store, fetchImpl }).finally(() => running.delete(store.userId)))
+        running.set(store.userId, runSync({ store, fetchImpl, plan }).finally(() => running.delete(store.userId)))
       }
       return await running.get(store.userId)
     } catch (err) {

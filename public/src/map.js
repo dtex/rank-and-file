@@ -1,4 +1,5 @@
 import { html, nothing, svg } from 'lit'
+import './plan.js'
 import { View, accuracy, api, board, dot, resultWord, sideName, verdict } from './lib.js'
 
 const W = 134
@@ -199,7 +200,9 @@ class CbMap extends View {
             <span class="muted">${active.count} of ${active.target}${active.reach.of
               ? html` · reached in ${active.reach.reached} of your last ${active.reach.of} ${sideName(side)} games` : nothing}</span>
           </a>`
-        : html`<div class="mcard muted">${dot(side)}No ${sideName(side)} openings left to uncover from here.</div>`}
+        : html`<div class="mcard muted">${dot(side)}${this.state.plan.atLimit
+            ? `Your next ${sideName(side)} opening needs a membership.`
+            : `No ${sideName(side)} openings left to uncover from here.`}</div>`}
       ${parked.map((p) => html`<div class="row" style="margin-top:6px">
         <span class="muted">Parked: ${p.name} ${p.count}/${p.target}</span>
         <button class="link" ?disabled=${this.busy} @click=${() => this.switchTo({ id: p.id })}>Resume</button></div>`)}`
@@ -225,6 +228,13 @@ class CbMap extends View {
     if (!this.ask) return nothing
     const side = this.ask.side
     const current = this.state.missions[side].active
+    if (this.state.plan.atLimit) {
+      return html`<div class="mcard ask">
+        <div class="eyebrow">This opening needs a membership</div>
+        <p style="margin-top:6px">You have uncovered all ${this.state.plan.freeOpenings} free openings. Everything you have uncovered stays yours to play.</p>
+        <button @click=${() => { this.ask = null; this.error = '' }}>Close</button>
+      </div>`
+    }
     return html`<div class="mcard ask">
       <div class="eyebrow">Uncover this opening?</div>
       <p style="margin-top:6px">It is a hidden ${sideName(side)} opening and becomes your ${sideName(side)} mission.
@@ -261,6 +271,7 @@ class CbMap extends View {
       </div>
       <aside class="sidebar">
         ${this.renderAsk()}
+        ${s.plan.subscribed ? nothing : html`<cb-plan .plan=${s.plan}></cb-plan>`}
         <div>
           <div class="eyebrow">Active missions</div>
           ${this.renderMission('w')}${this.renderMission('b')}

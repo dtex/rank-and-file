@@ -31,7 +31,7 @@ export function gameAdvice(tree, progress, game) {
   const all = []
   for (const node of tree.nodes) {
     const mission = progress.missions[node.id]
-    if (!mission || node.side !== side || game.end <= mission.startedAt) continue
+    if (!mission || mission.status === 'locked' || node.side !== side || game.end <= mission.startedAt) continue
     const at = keys.indexOf(node.key)
     if (at < 0) continue
     const checks = []
@@ -50,7 +50,7 @@ export function gameAdvice(tree, progress, game) {
 /** Games that reached `node` and were scored on its advice, oldest first: [{ game, score, checks }]. */
 export function adviceHistory(tree, progress, games, node) {
   const out = []
-  if (!progress.missions[node.id]) return out
+  if (!progress.missions[node.id] || progress.missions[node.id].status === 'locked') return out
   for (const game of games) {
     const o = gameAdvice(tree, progress, game)?.openings.find((x) => x.id === node.id)
     if (o && o.score !== null) out.push({ game, score: o.score, checks: o.checks })

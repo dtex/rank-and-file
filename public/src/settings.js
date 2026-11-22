@@ -1,5 +1,6 @@
 import { html, nothing } from 'lit'
 import { View, api } from './lib.js'
+import './plan.js'
 
 const LABEL = { bullet: 'Bullet', blitz: 'Blitz', rapid: 'Rapid', daily: 'Daily' }
 
@@ -67,6 +68,7 @@ class CbSettings extends View {
               ${this.msg ? html`<span class="muted">${this.msg}</span>` : nothing}
               ${this.error ? html`<span style="color:var(--bad)">${this.error}</span>` : nothing}</div>`}
       </form>
+      <div class="form"><h3>Membership</h3><cb-plan full .plan=${{ ...this.me?.plan, ...this.data.plan }}></cb-plan></div>
       <cb-account .me=${this.me}></cb-account>
     </div></div>`
   }

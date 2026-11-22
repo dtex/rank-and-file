@@ -6,6 +6,7 @@ import fastifyRateLimit from '@fastify/rate-limit'
 import fastifyStatic from '@fastify/static'
 import { createAccounts } from './services/accounts.js'
 import { loadConfig } from './services/config.js'
+import { loadPlan } from './services/entitlement.js'
 import { createMailer } from './services/mailer.js'
 import { createStore } from './services/store.js'
 import accountRoutes from './routes/account.js'
@@ -59,7 +60,7 @@ export function buildApp({ pool, config = loadConfig(), fetchImpl = fetch, maile
       const user = await accounts.sessionUser(req.cookies[SESSION_COOKIE])
       if (!user) return reply.code(401).send({ error: 'Sign in to continue.' })
       req.user = user
-      req.cb = { store: store.forUser(user.id), fetchImpl }
+      req.cb = { store: store.forUser(user.id), fetchImpl, plan: await loadPlan(pool, user) }
       if (!user.accepted_terms_at && !BEFORE_CONSENT.some((p) => req.url.startsWith(p))) {
         return reply.code(403).send({ error: 'Accept the terms to continue.', needsConsent: true })
       }

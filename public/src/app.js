@@ -169,6 +169,10 @@ class CbApp extends View {
                   <button @click=${() => this.dismissEvent(event, `opening-${next.id}`)}>Study it</button>
                 </div>
                 <p class="muted" style="margin-top:12px">Prefer another branch? Pick any hidden ${sideName(next.side)} tile on the map. ${next.name} is then parked and keeps its count.</p>`
+            : event.paywall
+              ? html`<h3 style="margin-top:16px">That was your last free opening</h3>
+                <p>You have uncovered all ${this.state.plan.freeOpenings} free openings, and they stay yours to play. A membership uncovers the rest of the map.</p>
+                <button class="pri" @click=${() => this.dismissEvent(event)}>Back to the map</button>`
             : html`<h3 style="margin-top:16px">Nothing left to uncover from here</h3>
                 <p>There are no more hidden ${sideName(node.side)} openings next to your map. More open up as your ${sideName(node.side === 'w' ? 'b' : 'w')} missions progress.</p>
                 <button class="pri" @click=${() => this.dismissEvent(event)}>Back to the map</button>`}
