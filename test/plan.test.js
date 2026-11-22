@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { loadTree } from '../services/tree.js'
-import { FREE_OPENINGS, applyEntitlement, candidates, fillSlots, isUncovered, processGames, switchMission, uncoveredCount } from '../services/missions.js'
+import { FREE_OPENINGS, applyEntitlement, fillSlots, isUncovered, processGames, switchMission, uncoveredCount } from '../services/missions.js'
 import { FREE_PLAN, grantGift, loadPlan, revokeGifts } from '../services/entitlement.js'
 import { openingView, stateView } from '../services/views.js'
 import { signIn, testApp, uniqueEmail } from './helpers/app.js'
@@ -26,29 +26,32 @@ const fresh = (limit) => {
   fillSlots(tree, progress, T0, limit)
   return progress
 }
-/** Uncover openings one after another until `count` are open. Each gets a later start time. */
+/** Uncover openings one after another until `count` are open, as finished missions would. Each gets a later start time. */
 function uncover(p, count, limit = Infinity) {
   let t = T0 + 10
   while (uncoveredCount(p) < count) {
     const side = uncoveredCount(p) % 2 ? 'b' : 'w'
-    const next = candidates(tree, p, side)[0]
     const current = p.slots[side]
-    // Finish the current mission first so the one-parked-mission rule never gets in the way.
     if (current) Object.assign(p.missions[current], { status: 'done' })
     p.slots[side] = null
-    switchMission(tree, p, next.id, (t += 10), limit)
+    assert.equal(fillSlots(tree, p, (t += 10), limit).length, 1)
   }
   return p
+}
+/** Finish a colour's mission without playing it, leaving the slot empty. */
+function finish(p, side) {
+  p.missions[p.slots[side]].status = 'done'
+  p.slots[side] = null
 }
 
 test('a free player keeps the two starting openings and can uncover four more', () => {
   const p = uncover(fresh(FREE_OPENINGS), FREE_OPENINGS, FREE_OPENINGS)
   assert.equal(uncoveredCount(p), 6)
-  const next = candidates(tree, p, 'w')[0]
-  assert.throws(() => switchMission(tree, p, next.id, T0 + 999, FREE_OPENINGS), (err) => err.paywall === true && /Subscribe/.test(err.message))
+  finish(p, 'w')
+  assert.equal(fillSlots(tree, p, T0 + 999, FREE_OPENINGS).length, 0)
   assert.equal(uncoveredCount(p), 6)
-  // The same move is fine with a membership.
-  switchMission(tree, p, next.id, T0 + 999, Infinity)
+  // The same finished mission uncovers the next opening with a membership.
+  assert.equal(fillSlots(tree, p, T0 + 999, Infinity).length, 1)
   assert.equal(uncoveredCount(p), 7)
 })
 
@@ -91,7 +94,7 @@ test('when a membership ends, only the first six openings stay open; the rest re
     assert.equal(view.nodes.some((x) => x.id === id), false)
     assert.equal(text.includes(tree.byId.get(id).name), false, `${id} is not named`)
     assert.equal(openingView(tree, p, [], id), null)
-    assert.throws(() => switchMission(tree, p, id, T0 + 10002, FREE_OPENINGS), (err) => err.paywall === true)
+    assert.throws(() => switchMission(tree, p, id, T0 + 10002), (err) => err.paywall === true)
   }
   assert.equal(view.plan.locked, 3)
   assert.equal(fillSlots(tree, p, T0 + 10003, FREE_OPENINGS).length, 0)
@@ -120,13 +123,14 @@ test('when a membership ends, only the first six openings stay open; the rest re
 
 test('a colour whose mission was locked falls back to a parked free one', () => {
   const p = fresh()
-  switchMission(tree, p, 'qp', T0 + 10) // kp parked, qp active: both among the first six
+  // kp parked, qp active: both among the first six.
+  p.missions.kp.status = 'parked'
+  p.missions.qp = { status: 'active', side: 'w', startedAt: T0 + 10, since: T0 + 10, games: [] }
+  p.slots.w = 'qp'
   uncover(p, 6)
   // A seventh opening for White becomes the active mission.
-  p.missions[p.slots.w].status = 'done'
-  p.slots.w = null
-  const seventh = candidates(tree, p, 'w')[0]
-  switchMission(tree, p, seventh.id, T0 + 500)
+  finish(p, 'w')
+  const [seventh] = fillSlots(tree, p, T0 + 500)
   assert.equal(p.missions.kp.status, 'parked')
 
   applyEntitlement(tree, p, false, T0 + 1000)
@@ -194,9 +198,11 @@ test('the API enforces the free limit and unlocks with a gift', async () => {
   assert.equal(state.nodes.some((x) => x.id === seventh), false)
   const opening = await c.get(`/api/openings/${seventh}`)
   assert.deepEqual([opening.statusCode, opening.json().paywall], [402, true])
-  const fog = state.fog[0]
-  const blocked = await c.post('/api/missions/switch', { fid: fog.fid })
+  const blocked = await c.post('/api/missions/switch', { id: seventh })
   assert.deepEqual([blocked.statusCode, blocked.json().paywall], [402, true])
+  // A fog tile cannot be chosen, by its tile id or by guessing the opening's id.
+  assert.equal((await c.post('/api/missions/switch', { fid: state.fog[0].fid })).statusCode, 400)
+  assert.equal((await c.post('/api/missions/switch', { id: 'staunton' })).statusCode, 409)
 
   await grantGift(ctx.pool, { email })
   const open = (await c.get('/api/state')).json()

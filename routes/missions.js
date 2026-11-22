@@ -1,6 +1,6 @@
 import { loadState, locked } from '../services/engine.js'
 import { switchMission } from '../services/missions.js'
-import { gamesView, openingView, openingsView, resolveFogId, stateView } from '../services/views.js'
+import { gamesView, openingView, openingsView, stateView } from '../services/views.js'
 
 export default async function missionRoutes(app) {
   app.get('/api/state', (req) => locked(req.cb.store, async () => {
@@ -27,14 +27,13 @@ export default async function missionRoutes(app) {
     return view ?? reply.code(404).send({ error: 'You have not uncovered that opening yet.' })
   }))
 
-  // Body: { fid } to uncover a fog tile, or { id } to resume a parked mission.
+  // Body: { id } of a parked mission to resume. There is no way to choose a hidden opening.
   app.post('/api/missions/switch', (req, reply) => locked(req.cb.store, async () => {
     const { tree, progress, games } = await loadState(req.cb)
-    const { fid, id } = req.body || {}
-    const target = fid ? resolveFogId(tree, progress, fid)?.id : id
-    if (!target) return reply.code(400).send({ error: 'That opening is no longer available. Reload the map.' })
+    const id = req.body?.id
+    if (typeof id !== 'string') return reply.code(400).send({ error: 'Say which parked mission to resume.' })
     try {
-      switchMission(tree, progress, target, Math.floor(Date.now() / 1000), req.cb.plan.limit)
+      switchMission(tree, progress, id, Math.floor(Date.now() / 1000))
     } catch (err) {
       if (err.paywall) return reply.code(402).send({ error: err.message, paywall: true })
       return reply.code(409).send({ error: err.message })

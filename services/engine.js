@@ -26,9 +26,10 @@ export async function loadState({ store, plan = FULL_PLAN }) {
     throw Object.assign(new Error('Add your chess.com username first.'), { statusCode: 409, needsUsername: true })
   }
   const relocked = applyEntitlement(getTree(), progress, plan.subscribed, now())
-  const started = fillSlots(getTree(), progress, now(), plan.limit)
+  const games = await store.loadAllGames()
+  const started = fillSlots(getTree(), progress, now(), plan.limit, games)
   if (relocked || started.length) await store.saveProgress(progress)
-  return { tree: getTree(), progress, games: await store.loadAllGames() }
+  return { tree: getTree(), progress, games }
 }
 
 export async function runSync({ store, fetchImpl, plan = FULL_PLAN }) {

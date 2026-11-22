@@ -50,7 +50,6 @@ class CbMap extends View {
     state: { attribute: false },
     fresh: { attribute: false },
     view: { state: true },
-    ask: { state: true },
     error: { state: true },
     busy: { state: true },
   }
@@ -58,7 +57,6 @@ class CbMap extends View {
   constructor() {
     super()
     this.view = null
-    this.ask = null
     this.fresh = new Set()
   }
 
@@ -156,7 +154,6 @@ class CbMap extends View {
     try {
       const before = new Set(this.state.nodes.map((n) => n.id))
       const state = await api('/api/missions/switch', { method: 'POST', body })
-      this.ask = null
       const fresh = state.nodes.filter((n) => !before.has(n.id)).map((n) => n.id)
       this.dispatchEvent(new CustomEvent('cb-state', { detail: { state, fresh }, bubbles: true }))
     } catch (err) {
@@ -170,9 +167,9 @@ class CbMap extends View {
     const style = `left:${it.x}px;top:${it.y}px`
     if (it.fog) {
       const f = it.fog
-      return html`<button class="fogn ${this.ask?.fid === f.fid ? 'sel' : ''}" style=${style}
-        title="Hidden ${sideName(f.side)} opening" @click=${() => { this.ask = f; this.error = '' }}>
-        ${dot(f.side)}<span class="q">?</span> hidden</button>`
+      return html`<div class="fogn" style=${style}
+        title="Hidden ${sideName(f.side)} opening. Finishing a mission uncovers the one your games reach most.">
+        ${dot(f.side)}<span class="q">?</span> hidden</div>`
     }
     const n = it.node
     if (n.status === 'start') {
@@ -205,7 +202,8 @@ class CbMap extends View {
             : `No ${sideName(side)} openings left to uncover from here.`}</div>`}
       ${parked.map((p) => html`<div class="row" style="margin-top:6px">
         <span class="muted">Parked: ${p.name} ${p.count}/${p.target}</span>
-        <button class="link" ?disabled=${this.busy} @click=${() => this.switchTo({ id: p.id })}>Resume</button></div>`)}`
+        <button class="link" ?disabled=${this.busy} @click=${() => this.switchTo({ id: p.id })}>Resume</button></div>`)}
+      ${this.error && parked.length ? html`<p style="color:var(--bad)">${this.error}</p>` : nothing}`
   }
 
   /** "Follow the advice" missions, started when recent games in an opening fall below the target. */
@@ -221,29 +219,6 @@ class CbMap extends View {
         <span class="muted">Your last ${m.of} games here averaged ${m.startAverage}%. Average ${m.threshold}% over ${m.of} new ones${m.played
           ? html` · ${m.current}% after ${m.played}` : nothing}</span>
       </a>`)}
-    </div>`
-  }
-
-  renderAsk() {
-    if (!this.ask) return nothing
-    const side = this.ask.side
-    const current = this.state.missions[side].active
-    if (this.state.plan.atLimit) {
-      return html`<div class="mcard ask">
-        <div class="eyebrow">This opening needs a membership</div>
-        <p style="margin-top:6px">You have uncovered all ${this.state.plan.freeOpenings} free openings. Everything you have uncovered stays yours to play.</p>
-        <button @click=${() => { this.ask = null; this.error = '' }}>Close</button>
-      </div>`
-    }
-    return html`<div class="mcard ask">
-      <div class="eyebrow">Uncover this opening?</div>
-      <p style="margin-top:6px">It is a hidden ${sideName(side)} opening and becomes your ${sideName(side)} mission.
-        ${current ? html`${current.name} (${current.count} of ${current.target}) is parked and keeps its count.` : nothing}</p>
-      ${this.error ? html`<p style="color:var(--bad)">${this.error}</p>` : nothing}
-      <div class="row">
-        <button class="pri" ?disabled=${this.busy} @click=${() => this.switchTo({ fid: this.ask.fid })}>Uncover</button>
-        <button @click=${() => { this.ask = null; this.error = '' }}>Cancel</button>
-      </div>
     </div>`
   }
 
@@ -270,7 +245,6 @@ class CbMap extends View {
         </div>
       </div>
       <aside class="sidebar">
-        ${this.renderAsk()}
         ${s.plan.subscribed ? nothing : html`<cb-plan .plan=${s.plan}></cb-plan>`}
         <div>
           <div class="eyebrow">Active missions</div>

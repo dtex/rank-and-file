@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { loadTree } from '../services/tree.js'
 import { candidates, fillSlots, processGames, switchMission } from '../services/missions.js'
-import { fogId, openingView, resolveFogId, stateView } from '../services/views.js'
+import { fogId, openingView, stateView } from '../services/views.js'
 
 const tree = loadTree()
 const T0 = 1795000000
@@ -52,6 +52,35 @@ test('counting, completion and the next mission', () => {
   assert.equal(p.missions.knight.games.length, 2)
 })
 
+test('the next opening uncovered is the one the recent games reach most', () => {
+  const p = fresh()
+  // History: mostly the Bishop's Opening as White, mostly the Sicilian as Black.
+  const history = [
+    ...Array.from({ length: 3 }, (_, i) => game('e4 e5 Bc4', { end: T0 - 900 + i })),
+    game('e4 e5 Nf3', { end: T0 - 800 }),
+    ...Array.from({ length: 3 }, (_, i) => game('e4 c5', { as: 'b', end: T0 - 700 + i })),
+    game('e4 e6', { as: 'b', end: T0 - 600 }),
+    // Reached with the other colour, so it says nothing about what I play.
+    ...Array.from({ length: 5 }, (_, i) => game('e4 e5 Nc3', { as: 'b', end: T0 - 500 + i })),
+  ]
+  const white = Array.from({ length: 10 }, () => game('e4 e5'))
+  const black = Array.from({ length: 8 }, () => game('e4 e5', { as: 'b' }))
+  const { events } = processGames(tree, p, [...history, ...white, ...black])
+  assert.deepEqual(events.map((e) => e.next), ['bishop', 'sicilian'])
+  assert.deepEqual(p.slots, { w: 'bishop', b: 'sicilian' })
+})
+
+test('only the last 1000 games decide the next opening', () => {
+  const p = fresh()
+  const old = Array.from({ length: 5 }, (_, i) => game('e4 e5 Bc4', { end: T0 - 5000 + i }))
+  const filler = Array.from({ length: 999 }, (_, i) => game('e4 e5', { as: 'b', end: T0 - 4000 + i }))
+  const recent = game('e4 e5 Nc3', { end: T0 - 10 })
+  p.missions.kp.status = 'done'
+  p.slots.w = null
+  // The five Bishop's Opening games are older than the window; one Vienna game is inside it.
+  assert.equal(fillSlots(tree, p, T0, Infinity, [...old, ...filler, recent])[0].id, 'vienna')
+})
+
 test('a game is only judged once', () => {
   const p = fresh()
   const g = game('e4 e5')
@@ -72,16 +101,15 @@ test('games as Black are judged against the Black mission', () => {
   assert.equal(p.missions.kp.games.length, 0)
 })
 
-test('switching parks the current mission and keeps its count', () => {
+test('resuming a parked mission parks the current one and keeps its count', () => {
   const p = fresh()
+  // A mission ends up parked when a membership lapses or returns; set one up directly.
+  p.missions.qp = { status: 'parked', side: 'w', startedAt: T0, since: T0, games: [] }
   processGames(tree, p, [game('e4 e5')])
   switchMission(tree, p, 'qp', T0 + 5000)
   assert.equal(p.slots.w, 'qp')
   assert.equal(p.missions.kp.status, 'parked')
   assert.equal(p.missions.kp.games.length, 1)
-  // Only one parked mission per colour: no third opening until one is finished or resumed.
-  assert.ok(candidates(tree, p, 'w').length > 0)
-  assert.throws(() => switchMission(tree, p, candidates(tree, p, 'w')[0].id, T0 + 6000), /parked mission/)
   switchMission(tree, p, 'kp', T0 + 7000)
   assert.equal(p.slots.w, 'kp')
   assert.equal(p.missions.qp.status, 'parked')
@@ -91,9 +119,13 @@ test('switching parks the current mission and keeps its count', () => {
   assert.equal(early.verdict.type, 'before_mission')
 })
 
-test('you cannot jump to an opening that is not next to the uncovered map', () => {
+test('nobody can choose a hidden opening, not even a fog tile next to their map', () => {
   const p = fresh()
-  assert.throws(() => switchMission(tree, p, 'italian', T0 + 1), /not next to/)
+  const before = structuredClone(p)
+  assert.ok(candidates(tree, p, 'w').some((n) => n.id === 'qp'))
+  assert.throws(() => switchMission(tree, p, 'qp', T0 + 1), /still hidden/)
+  assert.throws(() => switchMission(tree, p, 'italian', T0 + 1), /still hidden/)
+  assert.deepEqual(p, before)
 })
 
 test('the map view never names a hidden opening', () => {
@@ -108,7 +140,6 @@ test('the map view never names a hidden opening', () => {
   assert.ok(view.fog.length > 0)
   const tile = view.fog.find((f) => f.fid === fogId('sicilian'))
   assert.deepEqual(tile, { fid: fogId('sicilian'), parent: 'kp', side: 'b' })
-  assert.equal(resolveFogId(tree, p, tile.fid).id, 'sicilian')
   assert.equal(openingView(tree, p, [hidden], 'sicilian'), null)
 })
 

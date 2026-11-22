@@ -1,12 +1,13 @@
 // Mission state: which openings are uncovered, which two are active, and what
-// happens when a game counts. All functions mutate the `progress` object passed in.
-import { judge, userSide } from './matcher.js'
-
-/** Parked missions allowed per colour. Keeps "choose another branch" from uncovering the whole map. */
-const MAX_PARKED = 1
+// happens when a game counts. Nobody chooses what is uncovered next: it is always
+// the hidden opening their games reach most (see nextOpening). All functions mutate the `progress` object passed in.
+import { judge, reached, userSide } from './matcher.js'
 
 /** Openings a user may have uncovered without a membership: the two starting ones and four more. */
 export const FREE_OPENINGS = 6
+
+/** How many of the user's latest games decide which opening comes out of the fog next. */
+export const RANK_WINDOW = 1000
 
 /** Locked missions (see applyEntitlement) are back under the fog: kept, but not shown or played. */
 export const isUncovered = (progress, id) => {
@@ -49,14 +50,37 @@ function activate(progress, node, since) {
 }
 
 /**
- * Give each empty slot the next opening in line, while `limit` allows another
- * to be uncovered. Returns the openings that were uncovered.
+ * The hidden opening the user already plays most: the one reached, with its
+ * colour, by the most of their last RANK_WINDOW games up to `until`. Ties, and
+ * a user with no games yet, fall back to map order, main lines first.
  */
-export function fillSlots(tree, progress, since, limit = Infinity) {
+export function nextOpening(tree, progress, side, games = [], until = Infinity) {
+  const open = candidates(tree, progress, side).filter((n) => !progress.missions[n.id])
+  if (open.length < 2) return open[0] ?? null
+  const { username } = progress.settings
+  const recent = games
+    .filter((g) => g.end <= until && userSide(g, username))
+    .sort((a, b) => a.end - b.end)
+    .slice(-RANK_WINDOW)
+    .filter((g) => userSide(g, username) === side)
+  let best = open[0]
+  let most = 0
+  for (const n of open) {
+    const count = recent.filter((g) => reached(n, g)).length
+    if (count > most) [best, most] = [n, count]
+  }
+  return best
+}
+
+/**
+ * Give each empty slot the opening the user's games reach most (see nextOpening),
+ * while `limit` allows another to be uncovered. Returns the openings that were uncovered.
+ */
+export function fillSlots(tree, progress, since, limit = Infinity, games = []) {
   const started = []
   for (const side of ['w', 'b']) {
     if (progress.slots[side] || !canUncover(progress, limit)) continue
-    const next = candidates(tree, progress, side).find((n) => !progress.missions[n.id])
+    const next = nextOpening(tree, progress, side, games, since)
     if (!next) continue
     activate(progress, next, since)
     started.push(next)
@@ -102,7 +126,7 @@ export function processGames(tree, progress, games, limit = Infinity) {
         mission.completedAt = game.end
         progress.slots[side] = null
         // The next mission starts from this game's end, so games later in the same sync can count for it.
-        const [next] = fillSlots(tree, progress, game.end, limit)
+        const [next] = fillSlots(tree, progress, game.end, limit, games)
         const event = { id: `${id}-${game.end}`, type: 'completed', node: id, next: next?.id ?? null, at: game.end, seen: false }
         // More to uncover, but the free openings are used up.
         if (!next && !canUncover(progress, limit) && candidates(tree, progress, side).length) event.paywall = true
@@ -116,31 +140,20 @@ export function processGames(tree, progress, games, limit = Infinity) {
 }
 
 /**
- * Switch a colour's mission to another opening: either a hidden neighbour
- * (which uncovers it) or a parked mission. The current mission is parked and keeps its count.
+ * Resume a parked mission. The colour's current mission is parked in its place
+ * and keeps its count. Hidden openings cannot be chosen this way: they are
+ * uncovered only by fillSlots.
  */
-export function switchMission(tree, progress, toId, now, limit = Infinity) {
+export function switchMission(tree, progress, toId, now) {
   const node = tree.byId.get(toId)
   if (!node || node === tree.root) throw new Error('That opening is not on the map.')
-  const side = node.side
   const existing = progress.missions[toId]
-  if (existing?.status === 'done') throw new Error('That mission is already complete.')
-  if (existing?.status === 'active') return node
-  if (existing?.status === 'locked') throw paywall('That opening is locked. Subscribe to open it again, with its progress intact.')
-  if (!existing && !canUncover(progress, limit)) {
-    throw paywall(`You have uncovered all ${limit} free openings. Subscribe to uncover more.`)
-  }
-  if (!existing && !candidates(tree, progress, side).includes(node)) {
-    throw new Error('That opening is not next to anything you have uncovered yet.')
-  }
+  if (!existing) throw new Error('That opening is still hidden. Openings are uncovered as you complete missions.')
+  if (existing.status === 'done') throw new Error('That mission is already complete.')
+  if (existing.status === 'active') return node
+  if (existing.status === 'locked') throw paywall('That opening is locked. Subscribe to open it again, with its progress intact.')
 
-  const currentId = progress.slots[side]
-  const parked = Object.values(progress.missions).filter((m) => m.side === side && m.status === 'parked').length
-  const parkedAfter = parked + (currentId ? 1 : 0) - (existing ? 1 : 0)
-  // Resuming never adds to the parked pile, so only a new opening is held back.
-  if (!existing && parkedAfter > MAX_PARKED) {
-    throw new Error('You already have a parked mission for this colour. Finish or resume it before uncovering another.')
-  }
+  const currentId = progress.slots[node.side]
   if (currentId) progress.missions[currentId].status = 'parked'
   activate(progress, node, now)
   return node

@@ -8,10 +8,6 @@ import { deepestNode, deviation, formatMove, ineligibleReason, reached, userResu
 /** Opaque id for a fog tile, so the real id (which names the opening) is not exposed. */
 export const fogId = (id) => createHash('sha1').update(`fog:${id}`).digest('hex').slice(0, 10)
 
-export function resolveFogId(tree, progress, fid) {
-  return candidates(tree, progress).find((n) => fogId(n.id) === fid) ?? null
-}
-
 function movesText(node) {
   return node.plies.map((san, i) => (i % 2 === 0 ? `${i / 2 + 1}.${san}` : san)).join(' ')
 }

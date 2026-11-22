@@ -5,8 +5,10 @@ Chess training for the rest of us. Opening missions tracked against your chess.c
 ## Opening missions
 
 You get a mission for one opening per colour, play your normal chess.com games, and the app
-counts the ones that actually reached that opening. Finish a mission and the next opening on
-the map comes out of the fog.
+counts the ones that actually reached that opening. Finish a mission and the next opening
+comes out of the fog: of the hidden ones next to what you have uncovered, the one your last
+1,000 games reached most often with that colour. With nothing to go on it follows the map's
+main lines. Nobody picks the next opening themselves.
 
 ## Advice accuracy
 

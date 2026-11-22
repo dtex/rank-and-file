@@ -88,7 +88,6 @@ cb-map { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 290px
 .node.parked { border-style: dashed; }
 .node.start { cursor: default; }
 .fogn { position: absolute; width: 134px; height: 44px; border: 1px dashed var(--muted); border-radius: 6px; background: var(--fog); color: var(--muted); font: 500 11.5px var(--mono); display: flex; align-items: center; justify-content: center; gap: 7px; padding: 0; }
-.fogn:hover, .fogn.sel { border-style: solid; border-color: var(--ink); color: var(--ink); }
 .fogn .q { font: 700 18px var(--display); }
 .meter { height: 5px; background: var(--surface2); border-radius: 3px; flex: 1; overflow: hidden; display: block; }
 .meter s { display: block; height: 100%; background: var(--gold); }

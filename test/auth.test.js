@@ -144,12 +144,22 @@ test('only configured providers are offered', async () => {
   assert.equal((await app.inject({ url: '/auth/github/start' })).statusCode, 404)
 })
 
+/** Give a user a parked 1.d4 mission to resume, as a lapsed membership can leave behind. */
+async function parkQp(ctx, c) {
+  await c.get('/api/state')
+  const store = ctx.app.ctx.store.forUser(c.userId)
+  const p = await store.loadProgress()
+  p.missions.qp = { status: 'parked', side: 'w', startedAt: p.createdAt, since: p.createdAt, games: [] }
+  await store.saveProgress(p)
+}
+
 test('each user sees only their own progress', async () => {
   const ctx = await testApp()
   const a = await signIn(ctx, uniqueEmail('a'), { username: 'alice' })
   const b = await signIn(ctx, uniqueEmail('b'), { username: 'bob' })
   assert.equal((await a.get('/api/state')).json().username, 'alice')
   assert.equal((await b.get('/api/state')).json().username, 'bob')
+  await parkQp(ctx, a)
   assert.equal((await a.post('/api/missions/switch', { id: 'qp' })).statusCode, 200)
   assert.equal((await a.get('/api/state')).json().missions.w.active.id, 'qp')
   assert.equal((await b.get('/api/state')).json().missions.w.active.id, 'kp')
@@ -158,6 +168,7 @@ test('each user sees only their own progress', async () => {
 test('requests that change something are refused from another site', async () => {
   const ctx = await testApp()
   const c = await signIn(ctx)
+  await parkQp(ctx, c)
   const evil = await c.request('POST', '/api/missions/switch', { id: 'qp' }, { origin: 'https://evil.example' })
   assert.equal(evil.statusCode, 403)
   const own = await c.request('POST', '/api/missions/switch', { id: 'qp' }, { origin: 'http://localhost:3210' })
