@@ -120,3 +120,36 @@ test('the privacy policy and terms are public, and every page carries the securi
   const page = (await app.inject({ url: '/' })).body
   assert.equal(/https?:\/\//.test(page), false, 'the page loads nothing from another site')
 })
+
+test('an admin can open the study page of a hidden opening without uncovering it; nobody else can', async () => {
+  const admin = uniqueEmail('admin')
+  const ctx = await testApp({ env: { ADMIN_ACCOUNTS: ` ${admin.toUpperCase()} , someone@example.com` } })
+  const a = await signIn(ctx, admin)
+  const other = await signIn(ctx)
+  assert.equal((await a.get('/api/me')).json().admin, true)
+  assert.equal((await other.get('/api/me')).json().admin, false)
+
+  // Only the admin's fog tiles say which opening they are.
+  const before = (await a.get('/api/state')).json()
+  const tile = before.fog.find((f) => f.id === 'sicilian')
+  assert.deepEqual([tile.parent, tile.side], ['kp', 'b'])
+  const theirs = (await other.get('/api/state')).json()
+  assert.equal(theirs.fog.some((f) => 'id' in f), false)
+  assert.equal(JSON.stringify(theirs).includes('Sicilian'), false)
+
+  const page = await a.get('/api/openings/sicilian')
+  assert.equal(page.statusCode, 200)
+  const o = page.json()
+  assert.deepEqual([o.name, o.status, o.count, o.hiddenChildren], ['Sicilian Defense', 'hidden', 0, 0])
+  assert.ok(o.blurb && o.ideas.length && o.missionGames.length === 0)
+  // The openings beyond it are listed too, and open the same way, though they are not fog tiles yet.
+  assert.ok(o.children.some((c) => c.id === 'sic-nf3' && c.status === 'hidden'))
+  assert.equal((await a.get('/api/openings/sic-nf3')).statusCode, 200)
+  // An admin cannot pick the next opening either.
+  assert.equal((await a.post('/api/missions/switch', { id: 'sicilian' })).statusCode, 409)
+  // Looking changes nothing.
+  assert.deepEqual((await a.get('/api/state')).json().fog, before.fog)
+
+  assert.equal((await other.get('/api/openings/sicilian')).statusCode, 404)
+  assert.equal((await a.get('/api/openings/nope')).statusCode, 404)
+})

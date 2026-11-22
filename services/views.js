@@ -1,5 +1,6 @@
 // Shapes data for the browser. Nothing about a hidden opening leaves the server
-// except that it exists, which colour owns it, and what it hangs off.
+// except that it exists, which colour owns it, and what it hangs off. Admins are
+// the exception: with `admin` set, the views show hidden openings in full.
 import { createHash } from 'node:crypto'
 import { FREE_OPENINGS, candidates, isUncovered, uncoveredCount } from './missions.js'
 import { ADVICE_WINDOW, adviceHistory, adviceThreshold, average, gameAdvice, missionRows } from './advice.js'
@@ -124,10 +125,11 @@ export function planView(plan, progress = null) {
   return out
 }
 
-export function stateView(tree, progress, games, plan = { subscribed: true, source: null, until: null, limit: Infinity }) {
+export function stateView(tree, progress, games, plan = { subscribed: true, source: null, until: null, limit: Infinity }, admin = false) {
   const nodes = [nodeView(tree.root, progress)]
   for (const n of tree.nodes) if (isUncovered(progress, n.id)) nodes.push(nodeView(n, progress))
-  const fog = candidates(tree, progress).map((n) => ({ fid: fogId(n.id), parent: n.parent, side: n.side }))
+  // An admin's tiles carry the real id, so they can link to the opening's page.
+  const fog = candidates(tree, progress).map((n) => ({ fid: fogId(n.id), parent: n.parent, side: n.side, ...(admin ? { id: n.id } : {}) }))
 
   const missions = {}
   for (const side of ['w', 'b']) {
@@ -195,9 +197,15 @@ export function openingsView(tree, progress) {
   return { openings: tree.nodes.filter((n) => isUncovered(progress, n.id)).map((n) => nodeView(n, progress)) }
 }
 
-export function openingView(tree, progress, games, id) {
+/**
+ * An opening's study page. For an admin it also opens for a hidden opening,
+ * without uncovering it, and lists the hidden openings beyond it.
+ */
+export function openingView(tree, progress, games, id, admin = false) {
   const node = tree.byId.get(id)
-  if (!node || !isUncovered(progress, id)) return null
+  if (!node || node === tree.root || (!isUncovered(progress, id) && !admin)) return null
+  const hidden = !isUncovered(progress, id)
+  const peek = (n) => (isUncovered(progress, n.id) ? nodeView(n, progress) : { ...nodeView(n, progress), status: progress.missions[n.id] ? 'locked' : 'hidden' })
   const { settings } = progress
   const pool = sideGames(node, games, settings)
   const hit = pool.filter((g) => reached(node, g))
@@ -225,7 +233,7 @@ export function openingView(tree, progress, games, id) {
   const history = adviceHistory(tree, progress, games, node)
 
   return {
-    ...nodeView(node, progress),
+    ...peek(node),
     blurb: node.blurb ?? '',
     ideas: ideaStats(node, history),
     advice: {
@@ -245,9 +253,9 @@ export function openingView(tree, progress, games, id) {
       elsewhere: [...elsewhere.values()].sort((a, b) => b.count - a.count).slice(0, 7),
       missed: pool.length - hit.length,
     },
-    missionGames: mission.games.map((u) => byUuid.get(u)).filter(Boolean).reverse().map((g) => gameView(g, tree, progress)),
-    children: node.children.filter((c) => isUncovered(progress, c.id)).map((c) => nodeView(c, progress)),
-    hiddenChildren: node.children.filter((c) => !isUncovered(progress, c.id)).length,
+    missionGames: (hidden ? [] : mission.games).map((u) => byUuid.get(u)).filter(Boolean).reverse().map((g) => gameView(g, tree, progress)),
+    children: node.children.filter((c) => admin || isUncovered(progress, c.id)).map(peek),
+    hiddenChildren: admin ? 0 : node.children.filter((c) => !isUncovered(progress, c.id)).length,
     links: {
       chesscom: `https://www.chess.com/analysis?fen=${fenParam}`,
       lichess: `https://lichess.org/analysis/standard/${node.fen.replace(/ /g, '_')}#explorer`,

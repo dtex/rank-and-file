@@ -25,6 +25,8 @@ export function loadConfig(env = process.env) {
     sessionSecret: env.SESSION_SECRET || randomBytes(32).toString('hex'),
     trustProxy: env.TRUST_PROXY === '1' || env.TRUST_PROXY === 'true',
     providers,
+    // Email addresses of accounts that may look at hidden openings (see .env.example). Stored lower-cased.
+    adminEmails: new Set((env.ADMIN_ACCOUNTS || '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)),
     smtp: {
       host: env.SMTP_HOST || '',
       port: Number(env.SMTP_PORT || 587),

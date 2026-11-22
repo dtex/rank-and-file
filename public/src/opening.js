@@ -1,14 +1,14 @@
 import { html, nothing } from 'lit'
 import { View, accuracy, adviceDetail, api, board, day, dot, resultWord, sideName } from './lib.js'
 
-const STATUS = { active: 'Active mission', parked: 'Parked mission', done: 'Complete' }
+const STATUS = { active: 'Active mission', parked: 'Parked mission', done: 'Complete', hidden: 'Admin view, still hidden', locked: 'Admin view, locked' }
 
 /** A small opening card, used in the list and for "what comes next". */
 export function openingCard(n) {
   return html`<a class="node ${n.status}" href="#opening-${n.id}">
     ${board(n.fen, n.side === 'b')}
     <b>${n.name}</b><span class="mv">${n.lastMove}</span>
-    <span class="st">${dot(n.side)}${n.status === 'done' ? '✓ ' : ''}${n.count}/${n.target}${n.status === 'parked' ? ' parked' : ''}</span>
+    <span class="st">${dot(n.side)}${n.status === 'done' ? '✓ ' : ''}${n.count}/${n.target}${['parked', 'hidden', 'locked'].includes(n.status) ? ` ${n.status}` : ''}</span>
   </a>`
 }
 

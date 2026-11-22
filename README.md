@@ -80,6 +80,12 @@ npm run gift -- --list
 
 The gift waits for that address and starts the first time the person uses the app signed in with it.
 
+## Admins
+
+List admin email addresses in `ADMIN_ACCOUNTS`, separated by commas. An admin who selects a hidden
+tile on the map gets that opening's full study page without uncovering it. From there they can
+carry on to the hidden openings beyond it.
+
 ## Marketing email
 
 `npm run marketing-list` prints the addresses that opted in, each with its own unsubscribe link.

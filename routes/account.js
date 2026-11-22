@@ -19,6 +19,7 @@ export default async function accountRoutes(app) {
       policyVersion: POLICY_VERSION,
       consentText: CONSENT_TEXT,
       plan: planView(req.cb.plan),
+      admin: req.cb.admin,
     }
   })
 

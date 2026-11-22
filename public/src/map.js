@@ -167,6 +167,11 @@ class CbMap extends View {
     const style = `left:${it.x}px;top:${it.y}px`
     if (it.fog) {
       const f = it.fog
+      // Only an admin's tiles carry an id: they open the study page without uncovering anything.
+      if (f.id) {
+        return html`<a class="fogn" style=${style} href="#opening-${f.id}" draggable="false"
+          title="Hidden ${sideName(f.side)} opening: view its page">${dot(f.side)}<span class="q">?</span> hidden</a>`
+      }
       return html`<div class="fogn" style=${style}
         title="Hidden ${sideName(f.side)} opening. Finishing a mission uncovers the one your games reach most.">
         ${dot(f.side)}<span class="q">?</span> hidden</div>`

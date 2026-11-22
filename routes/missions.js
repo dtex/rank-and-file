@@ -5,7 +5,7 @@ import { gamesView, openingView, openingsView, stateView } from '../services/vie
 export default async function missionRoutes(app) {
   app.get('/api/state', (req) => locked(req.cb.store, async () => {
     const { tree, progress, games } = await loadState(req.cb)
-    return stateView(tree, progress, games, req.cb.plan)
+    return stateView(tree, progress, games, req.cb.plan, req.cb.admin)
   }))
 
   app.get('/api/games', (req) => locked(req.cb.store, async () => {
@@ -20,7 +20,7 @@ export default async function missionRoutes(app) {
 
   app.get('/api/openings/:id', (req, reply) => locked(req.cb.store, async () => {
     const { tree, progress, games } = await loadState(req.cb)
-    const view = openingView(tree, progress, games, req.params.id)
+    const view = openingView(tree, progress, games, req.params.id, req.cb.admin)
     if (!view && progress.missions[req.params.id]?.status === 'locked') {
       return reply.code(402).send({ error: 'That opening is locked. Subscribe to open it again, with its progress intact.', paywall: true })
     }
@@ -39,7 +39,7 @@ export default async function missionRoutes(app) {
       return reply.code(409).send({ error: err.message })
     }
     await req.cb.store.saveProgress(progress)
-    return stateView(tree, progress, games, req.cb.plan)
+    return stateView(tree, progress, games, req.cb.plan, req.cb.admin)
   }))
 
   app.post('/api/events/seen', (req) => locked(req.cb.store, async () => {
@@ -47,6 +47,6 @@ export default async function missionRoutes(app) {
     const ids = new Set(req.body?.ids || [])
     for (const e of progress.events) if (ids.has(e.id)) e.seen = true
     await req.cb.store.saveProgress(progress)
-    return stateView(tree, progress, games, req.cb.plan)
+    return stateView(tree, progress, games, req.cb.plan, req.cb.admin)
   }))
 }
