@@ -31,6 +31,12 @@ export function loadConfig(env = process.env) {
       user: env.SMTP_USER || '',
       pass: env.SMTP_PASS || '',
     },
+    stripe: {
+      secretKey: env.STRIPE_SECRET_KEY || '',
+      webhookSecret: env.STRIPE_WEBHOOK_SECRET || '',
+      priceMonthly: env.STRIPE_PRICE_MONTHLY || '',
+      priceYearly: env.STRIPE_PRICE_YEARLY || '',
+    },
     mailFrom: env.MAIL_FROM || 'Chess Buddy <no-reply@localhost>',
   }
 }

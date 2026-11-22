@@ -53,6 +53,23 @@ class CbApp extends View {
     setInterval(() => this.ready && document.visibilityState === 'visible' && this.sync({ quiet: true }), SYNC_EVERY_MS)
     if (!this.magic) await this.loadMe()
     this.booted = true
+    this.afterCheckout()
+  }
+
+  /** Back from Stripe Checkout: confirm the payment so the membership shows at once. */
+  async afterCheckout() {
+    const q = new URLSearchParams(location.search)
+    if (q.get('billing') !== 'success') return
+    history.replaceState(null, '', `/${location.hash}`)
+    if (!this.me) return
+    try {
+      await api('/api/billing/confirm', { method: 'POST', body: { sessionId: q.get('session_id') } })
+      await this.loadMe()
+      if (this.ready) await this.load()
+      this.notice = { text: 'Thank you. Your membership is active and the whole map is open.' }
+    } catch (err) {
+      this.notice = { err: true, text: `Your payment went through, but the membership is not showing yet. Reload in a moment. ${err.message}` }
+    }
   }
 
   /** Signed in, consented and with a chess.com username: the app itself can load. */

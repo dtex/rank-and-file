@@ -1,4 +1,5 @@
 // What a user may do: free up to FREE_OPENINGS uncovered openings, everything with a membership.
+import { GIFT_RENEW_DAYS, MEMBER_STATUSES } from './billing.js'
 import { FREE_OPENINGS } from './missions.js'
 
 export const FREE_PLAN = { subscribed: false, source: null, until: null, limit: FREE_OPENINGS }
@@ -24,11 +25,23 @@ export async function activeGift(pool, user) {
   return redeemed.rows[0] ?? null
 }
 
-/** { subscribed, source, until (unix seconds), limit } for a user row. */
-export async function loadPlan(pool, user) {
+/**
+ * The plan for a user row: { subscribed, source, until (unix seconds), limit }, plus
+ * the billing details the browser shows. A paid subscription takes precedence over a gift.
+ */
+export async function loadPlan(pool, user, { billing = false } = {}) {
   const gift = await activeGift(pool, user)
-  if (gift) return { subscribed: true, source: 'gift', until: unix(gift.expires_at), limit: Infinity }
-  return { ...FREE_PLAN }
+  if (MEMBER_STATUSES.includes(user.subscription_status)) {
+    return {
+      subscribed: true, source: 'subscription', until: unix(user.subscription_period_end), limit: Infinity, billing,
+      status: user.subscription_status, interval: user.subscription_interval, cancelAtPeriodEnd: user.subscription_cancel_at_period_end,
+    }
+  }
+  if (gift) {
+    const until = unix(gift.expires_at)
+    return { subscribed: true, source: 'gift', until, limit: Infinity, billing, canSubscribe: until - Date.now() / 1000 <= GIFT_RENEW_DAYS * 86400 }
+  }
+  return { ...FREE_PLAN, billing }
 }
 
 export async function grantGift(pool, { email, days = 365, note = null }) {

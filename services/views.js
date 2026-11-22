@@ -118,7 +118,8 @@ function missedIdeas(node, history) {
 
 /** The plan as the browser needs it. `limit` is null when there is none. */
 export function planView(plan, progress = null) {
-  const out = { subscribed: plan.subscribed, source: plan.source, until: plan.until, limit: plan.subscribed ? null : plan.limit, freeOpenings: FREE_OPENINGS }
+  const { limit, ...rest } = plan
+  const out = { ...rest, limit: plan.subscribed ? null : limit, freeOpenings: FREE_OPENINGS }
   if (progress) {
     out.uncovered = uncoveredCount(progress)
     out.atLimit = !plan.subscribed && out.uncovered >= plan.limit
