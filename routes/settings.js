@@ -20,7 +20,8 @@ export default async function settingsRoutes(app) {
     if (!timeClasses.length) return reply.code(400).send({ error: 'Tick at least one type of game to count.' })
 
     let p = await store.loadProgress()
-    if (username.toLowerCase() !== p.settings.username.toLowerCase()) {
+    const previous = p.settings.username
+    if (previous && username.toLowerCase() !== previous.toLowerCase()) {
       // Stored games and missions belong to the old account.
       if (body.reset !== true) {
         return reply.code(409).send({ error: 'Changing the username starts over.', needsReset: true })

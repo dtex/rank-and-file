@@ -1,9 +1,15 @@
 import { buildApp } from './app.js'
+import { loadConfig } from './services/config.js'
 import { createPool, migrate } from './services/db.js'
 
-const port = Number(process.env.PORT || 3210)
-// Listen on this machine only.
-const host = process.env.HOST || '127.0.0.1'
+// Settings come from .env when there is one (see .env.example).
+try {
+  process.loadEnvFile()
+} catch { /* no .env file: use the environment as it is */ }
+
+const config = loadConfig()
+// Listens on this machine only by default; a reverse proxy in front provides HTTPS.
+const { port, host } = config
 
 const pool = createPool()
 try {
@@ -14,10 +20,10 @@ try {
   process.exit(1)
 }
 
-const app = buildApp({ pool })
+const app = buildApp({ pool, config })
 try {
   await app.listen({ port, host })
-  console.log(`\nChess Buddy is running at http://localhost:${port}\n`)
+  console.log(`\nChess Buddy is running at ${config.baseUrl}\n`)
 } catch (err) {
   app.log.error(err)
   process.exit(1)

@@ -1,0 +1,36 @@
+// Everything that differs between machines comes from the environment (see .env.example).
+import { randomBytes } from 'node:crypto'
+
+export function loadConfig(env = process.env) {
+  const port = Number(env.PORT || 3210)
+  const baseUrl = (env.BASE_URL || `http://localhost:${port}`).replace(/\/+$/, '')
+  const production = env.NODE_ENV === 'production'
+  if (production && !env.SESSION_SECRET) throw new Error('SESSION_SECRET must be set in production.')
+
+  const providers = {}
+  for (const id of ['google', 'github']) {
+    const clientId = env[`${id.toUpperCase()}_CLIENT_ID`]
+    const clientSecret = env[`${id.toUpperCase()}_CLIENT_SECRET`]
+    if (clientId && clientSecret) providers[id] = { clientId, clientSecret }
+  }
+
+  return {
+    port,
+    host: env.HOST || '127.0.0.1',
+    baseUrl,
+    origin: new URL(baseUrl).origin,
+    secureCookies: baseUrl.startsWith('https://'),
+    production,
+    // Without a fixed secret, sessions still work but signed links stop working after a restart.
+    sessionSecret: env.SESSION_SECRET || randomBytes(32).toString('hex'),
+    trustProxy: env.TRUST_PROXY === '1' || env.TRUST_PROXY === 'true',
+    providers,
+    smtp: {
+      host: env.SMTP_HOST || '',
+      port: Number(env.SMTP_PORT || 587),
+      user: env.SMTP_USER || '',
+      pass: env.SMTP_PASS || '',
+    },
+    mailFrom: env.MAIL_FROM || 'Chess Buddy <no-reply@localhost>',
+  }
+}

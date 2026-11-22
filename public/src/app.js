@@ -4,6 +4,7 @@ import './map.js'
 import './settings.js'
 import './games.js'
 import './opening.js'
+import './account.js'
 
 const TABS = [['map', 'Map'], ['games', 'Games'], ['openings', 'Openings'], ['settings', 'Settings']]
 const SYNC_EVERY_MS = 5 * 60 * 1000
@@ -16,6 +17,8 @@ class CbApp extends View {
     notice: { state: true },
     fresh: { state: true },
     version: { state: true },
+    me: { state: true },
+    booted: { state: true },
   }
 
   constructor() {
@@ -33,14 +36,42 @@ class CbApp extends View {
 
   async connectedCallback() {
     super.connectedCallback()
+    // An emailed link arrives as #magic=<token>. Take it out of the address bar straight away.
+    const magic = location.hash.match(/^#magic=([\w-]+)$/)
+    const loginError = location.hash.match(/^#login-error=([\w-]+)$/)
+    if (magic || loginError) history.replaceState(null, '', '/')
+    this.magic = magic?.[1] ?? null
+    this.loginError = loginError?.[1] ?? null
+
     window.addEventListener('hashchange', () => (this.route = this.readRoute()))
+    window.addEventListener('cb-signed-out', () => { this.me = null; this.state = null })
+    this.addEventListener('cb-me', () => this.loadMe())
     this.addEventListener('cb-state', (e) => this.setState(e.detail.state, e.detail.fresh))
     this.addEventListener('cb-reload', (e) => (e.detail?.sync ? this.sync() : this.load()))
     // Keep "synced 3 min ago" honest, and pick up new games while the tab stays open.
     setInterval(() => this.requestUpdate(), 30_000)
-    setInterval(() => document.visibilityState === 'visible' && this.sync({ quiet: true }), SYNC_EVERY_MS)
-    await this.load()
-    this.sync({ quiet: true })
+    setInterval(() => this.ready && document.visibilityState === 'visible' && this.sync({ quiet: true }), SYNC_EVERY_MS)
+    if (!this.magic) await this.loadMe()
+    this.booted = true
+  }
+
+  /** Signed in, consented and with a chess.com username: the app itself can load. */
+  get ready() {
+    return !!this.me && !this.me.needsConsent && !!this.me.username
+  }
+
+  async loadMe() {
+    const wasReady = this.ready
+    try {
+      this.me = await api('/api/me')
+    } catch (err) {
+      this.me = null
+      if (err.status !== 401) this.notice = { err: true, text: `Could not reach Chess Buddy. ${err.message}` }
+    }
+    if (this.ready && !wasReady) {
+      await this.load()
+      this.sync({ quiet: true })
+    }
   }
 
   setState(state, fresh = []) {
@@ -150,7 +181,7 @@ class CbApp extends View {
     if (!this.state) return html`<div class="page"><p class="muted">Loading…</p></div>`
     switch (this.route.name) {
       case 'settings':
-        return html`<cb-settings></cb-settings>`
+        return html`<cb-settings .me=${this.me}></cb-settings>`
       case 'games':
         return html`<cb-games .version=${this.version}></cb-games>`
       case 'openings':
@@ -163,6 +194,11 @@ class CbApp extends View {
   }
 
   render() {
+    if (this.magic) return html`<cb-magic .token=${this.magic}></cb-magic>`
+    if (!this.booted) return html`<div class="page"><p class="muted">Loading…</p></div>`
+    if (!this.me) return html`<cb-login .error=${this.loginError}></cb-login>`
+    if (this.me.needsConsent) return html`<cb-consent .me=${this.me}></cb-consent>`
+    if (!this.me.username) return html`<cb-welcome></cb-welcome>`
     const tab = this.route.name === 'opening' ? 'openings' : this.route.name
     return html`
       <header class="bar">

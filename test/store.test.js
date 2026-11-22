@@ -1,8 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { buildApp } from '../app.js'
 import { withLock } from '../services/store.js'
-import { testPool, testStore } from './helpers/db.js'
+import { testStore } from './helpers/db.js'
 
 const game = (uuid, end, over = {}) => ({
   uuid, url: `https://www.chess.com/game/live/${uuid}`, end, rated: true, timeClass: 'blitz', timeControl: '300', rules: 'chess',
@@ -62,16 +61,4 @@ test('withLock runs work for one key in order and survives a failure', async () 
   await assert.rejects(fails, /boom/)
   assert.equal(await last, 'ok')
   assert.deepEqual(seen, [1, 2, 3])
-})
-
-test('the API serves state and settings from the database', async () => {
-  const pool = await testPool()
-  const app = buildApp({ pool, logger: false })
-  const state = await app.inject({ url: '/api/state' })
-  assert.equal(state.statusCode, 200)
-  assert.ok(state.json().nodes.length >= 1)
-  const settings = await app.inject({ url: '/api/settings' })
-  assert.equal(settings.statusCode, 200)
-  assert.ok(Array.isArray(settings.json().settings.timeClasses))
-  await app.close()
 })

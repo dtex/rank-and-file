@@ -18,6 +18,9 @@ export const locked = (store, fn) => withLock(store.userId, fn)
 /** Progress with both mission slots filled where possible. Saves if anything changed. */
 export async function loadState({ store }) {
   const progress = await store.loadProgress()
+  if (!progress.settings.username) {
+    throw Object.assign(new Error('Add your chess.com username first.'), { statusCode: 409, needsUsername: true })
+  }
   if (fillSlots(getTree(), progress, now()).length) await store.saveProgress(progress)
   return { tree: getTree(), progress, games: await store.loadAllGames() }
 }

@@ -12,6 +12,7 @@ export default async function syncRoutes(app) {
       }
       return await running.get(store.userId)
     } catch (err) {
+      if (err.statusCode) throw err
       req.log.error(err)
       return reply.code(502).send({ error: err.message })
     }

@@ -3,7 +3,8 @@
 import { withTx } from './db.js'
 
 export const DEFAULT_SETTINGS = {
-  username: 'dtexus',
+  // The chess.com account to follow. Empty until the user has told us.
+  username: '',
   timeClasses: ['blitz', 'rapid', 'daily'],
   ratedOnly: true,
   adviceThreshold: 70,

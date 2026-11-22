@@ -14,7 +14,11 @@ export async function api(path, { method = 'GET', body } = {}) {
     body: body ? JSON.stringify(body) : undefined,
   })
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw Object.assign(new Error(data.error || `Request failed (${res.status})`), { data })
+  if (!res.ok) {
+    // A session that has ended sends the whole app back to sign-in.
+    if (res.status === 401 && path.startsWith('/api/')) window.dispatchEvent(new Event('cb-signed-out'))
+    throw Object.assign(new Error(data.error || `Request failed (${res.status})`), { data, status: res.status })
+  }
   return data
 }
 

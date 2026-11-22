@@ -1,13 +1,25 @@
-// chess.com public API client. No login needed. Requests go out one at a time
-// because the API rejects parallel bursts.
+// chess.com public API client. No login needed. Requests go out one at a time,
+// across all users, because the API rejects parallel bursts from one address.
 const BASE = 'https://api.chess.com/pub'
-const USER_AGENT = 'chess-buddy/0.1 (personal opening tracker)'
+const USER_AGENT = process.env.CHESSCOM_USER_AGENT || 'chess-buddy/0.3 (opening tracker)'
 const STANDARD_START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
 /** How many plies of each game are kept. Openings are decided well before this. */
 export const MAX_PLIES = 30
 
-async function get(url, etag, fetchImpl) {
+let queue = Promise.resolve()
+/** Run `fn` after every request queued before it has finished, whatever its outcome. */
+function inTurn(fn) {
+  const run = queue.then(fn, fn)
+  queue = run.catch(() => {})
+  return run
+}
+
+function get(url, etag, fetchImpl) {
+  return inTurn(() => request(url, etag, fetchImpl))
+}
+
+async function request(url, etag, fetchImpl) {
   const headers = { 'User-Agent': USER_AGENT, Accept: 'application/json' }
   if (etag) headers['If-None-Match'] = etag
   const res = await fetchImpl(url, { headers })

@@ -134,6 +134,14 @@ tr.sub td { background: var(--bg); }
 .form { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 20px; margin-top: 12px; max-width: 520px; display: grid; gap: 16px; }
 .form label { display: block; font-weight: 500; }
 .form input[type=text], .form input[type=number] { font: 14px var(--body); padding: 7px 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--ink); width: 100%; margin-top: 4px; }
+.form input[type=email] { font: 14px var(--body); padding: 7px 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--ink); width: 100%; margin-top: 4px; }
+.form h3 { font-size: 18px; }
+.form .check input { flex: none; }
+.stack { display: grid; gap: 12px; }
+.wide { width: 100%; text-align: center; padding: 9px 12px; }
+.gate { display: grid; place-items: center; }
+.gate .form { width: min(440px, 100%); margin: 0; }
+.gate .brand { font-size: 20px; }
 .form .check { display: flex; gap: 8px; align-items: center; font-weight: 400; margin-top: 6px; }
 
 /* mission complete */

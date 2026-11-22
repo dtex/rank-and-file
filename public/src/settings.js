@@ -4,7 +4,7 @@ import { View, api } from './lib.js'
 const LABEL = { bullet: 'Bullet', blitz: 'Blitz', rapid: 'Rapid', daily: 'Daily' }
 
 class CbSettings extends View {
-  static properties = { data: { state: true }, msg: { state: true }, error: { state: true }, confirmReset: { state: true } }
+  static properties = { me: { attribute: false }, data: { state: true }, msg: { state: true }, error: { state: true }, confirmReset: { state: true } }
 
   async connectedCallback() {
     super.connectedCallback()
@@ -20,6 +20,7 @@ class CbSettings extends View {
       this.confirmReset = false
       this.msg = reset ? 'Started over. Syncing games for the new username.' : 'Saved. The change applies to games synced from now on.'
       this.dispatchEvent(new CustomEvent('cb-reload', { detail: { sync: reset }, bubbles: true }))
+      if (reset) this.dispatchEvent(new CustomEvent('cb-me', { bubbles: true }))
     } catch (err) {
       if (err.data?.needsReset) this.confirmReset = true
       else this.error = err.message
@@ -66,6 +67,7 @@ class CbSettings extends View {
               ${this.msg ? html`<span class="muted">${this.msg}</span>` : nothing}
               ${this.error ? html`<span style="color:var(--bad)">${this.error}</span>` : nothing}</div>`}
       </form>
+      <cb-account .me=${this.me}></cb-account>
     </div></div>`
   }
 }
