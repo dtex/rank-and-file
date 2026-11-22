@@ -10,6 +10,7 @@ export const DEFAULT_SETTINGS = {
   username: 'dtexus',
   timeClasses: ['blitz', 'rapid', 'daily'],
   ratedOnly: true,
+  adviceThreshold: 70,
 }
 
 export function createStore(dir = process.env.CB_DATA_DIR || path.join(ROOT, 'data')) {

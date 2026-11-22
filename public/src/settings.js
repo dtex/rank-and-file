@@ -50,6 +50,12 @@ class CbSettings extends View {
             <input id="set-rated" type="checkbox" .checked=${f.ratedOnly} @change=${(e) => (f.ratedOnly = e.target.checked)}> Rated games only</label>
           <p class="muted" style="margin-top:8px">Chess960 and games that start from a set position, such as thematic tournaments, never count.</p>
         </div>
+        <label>Advice accuracy target, in percent
+          <input id="set-advice" type="number" min="0" max="100" step="5" .value=${String(f.adviceThreshold)}
+            @input=${(e) => (f.adviceThreshold = Number(e.target.value))}>
+          <span class="muted" style="font-weight:400;display:block;margin-top:6px">When your last 4 games in an opening follow its advice less than this on average,
+            you get a mission to work on it. 0 switches these missions off.</span>
+        </label>
         ${this.confirmReset
           ? html`<div class="mcard ask" style="margin:0">
               <p>Changing the username deletes the stored games and all mission progress, then starts again as <b>${f.username}</b>.</p>

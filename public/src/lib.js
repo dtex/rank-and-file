@@ -1,4 +1,4 @@
-import { html, LitElement } from 'lit'
+import { html, LitElement, nothing } from 'lit'
 
 /** Components render into the page itself so one stylesheet covers everything. */
 export class View extends LitElement {
@@ -55,6 +55,25 @@ export function day(unix) {
 }
 
 export const resultWord = { win: 'Win', loss: 'Loss', draw: 'Draw' }
+
+/** Advice accuracy as a chip: green at or above the target, red below. */
+export function accuracy(score, threshold) {
+  return html`<span class="chip ${score >= threshold ? 'ok' : 'bad'}">${score}%</span>`
+}
+
+const MARK = { pass: '✓', partial: '◐', fail: '✗', na: '–' }
+const MARK_WORD = { pass: 'Followed', partial: 'Partly followed', fail: 'Not followed', na: 'Did not come up' }
+
+/** One game's advice, idea by idea, for each opening it reached. */
+export function adviceDetail(advice, threshold) {
+  return html`<div class="advice">${advice.openings.map((o) => html`<div>
+    <div class="row"><a href="#opening-${o.id}"><b>${o.name}</b></a>
+      ${o.score === null ? html`<span class="muted">none of its advice came up</span>` : accuracy(o.score, threshold)}</div>
+    <ul class="marks">${o.checks.map((c) => html`<li class=${c.status}>
+      <span class="mark" title=${MARK_WORD[c.status]}>${MARK[c.status]}</span>
+      <span>${c.text}${c.note ? html` <span class="mv muted">${c.note}</span>` : nothing}</span></li>`)}</ul>
+  </div>`)}</div>`
+}
 
 /** The verdict chip and its explanation, shared by the sidebar and the game log. */
 export function verdict(v, { short = false } = {}) {

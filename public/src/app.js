@@ -99,8 +99,37 @@ class CbApp extends View {
     location.hash = to
   }
 
+  /** An advice mission starting or finishing. */
+  renderAdviceEvent(event) {
+    const { node } = event
+    const started = event.type === 'advice_started'
+    return html`<div class="overlay" role="dialog" aria-modal="true" aria-label=${started ? 'New advice mission' : 'Advice mission complete'}>
+      <div class="rcard">
+        ${board(node.fen, node.side === 'b')}
+        <div>
+          <span class="chip ${started ? 'gold' : 'ok'}">${dot(node.side)}${started ? 'New advice mission' : 'Advice mission complete'}</span>
+          <h3>${node.name}</h3>
+          ${started
+            ? html`<p style="margin-top:12px">Your last ${event.of} games that reached this opening followed its advice ${event.average}% of the time.
+                  The target is ${event.threshold}%.</p>
+                ${event.missed.length
+                  ? html`<p class="muted" style="margin-bottom:4px">What slipped:</p>
+                      <ul style="margin:0 0 12px;padding-left:20px">${event.missed.map((i) => html`<li>${i.text} <span class="muted">followed ${i.followed} of ${i.of}</span></li>`)}</ul>`
+                  : nothing}
+                <p class="muted">Mission: average ${event.threshold}% or better over your next ${event.of} games here. Your opening missions carry on as usual.</p>`
+            : html`<p style="margin-top:12px">Your last ${event.of} games here averaged ${event.average}%, above the ${event.threshold}% target.</p>`}
+          <div class="row">
+            <button class="pri" @click=${() => this.dismissEvent(event)}>Back to the map</button>
+            <button @click=${() => this.dismissEvent(event, `opening-${node.id}`)}>${started ? 'Study it' : 'See the games'}</button>
+          </div>
+        </div>
+      </div>
+    </div>`
+  }
+
   /** Shown once for each completed mission, oldest first. */
   renderComplete(event) {
+    if (event.type !== 'completed') return this.renderAdviceEvent(event)
     const { node, next } = event
     const reach = next?.reach
     const odds = !reach?.of ? ''

@@ -2,6 +2,7 @@
 // except that it exists, which colour owns it, and what it hangs off.
 import { createHash } from 'node:crypto'
 import { candidates, isUncovered } from './missions.js'
+import { ADVICE_WINDOW, adviceHistory, adviceThreshold, average, gameAdvice, missionRows } from './advice.js'
 import { deepestNode, deviation, formatMove, ineligibleReason, reached, userResult, userSide } from './matcher.js'
 
 /** Opaque id for a fog tile, so the real id (which names the opening) is not exposed. */
@@ -29,6 +30,7 @@ function nodeView(node, progress) {
     target: node.target,
     status: m ? m.status : 'start',
     count: m ? m.games.length : 0,
+    adviceMission: progress.advice?.missions[node.id]?.status === 'active',
   }
 }
 
@@ -56,7 +58,28 @@ function formatTimeControl(game) {
   return base >= 60 ? `${mins}+${inc || 0}` : `${mins}+${inc || 0}`
 }
 
-function gameView(game, tree, progress) {
+/** A game's advice accuracy with the wording of each idea filled in. Only uncovered openings appear. */
+function adviceView(game, tree, progress, onlyNode = null) {
+  const a = gameAdvice(tree, progress, game)
+  if (!a) return null
+  const openings = a.openings
+    .filter((o) => !onlyNode || o.id === onlyNode)
+    .map((o) => {
+      const node = tree.byId.get(o.id)
+      return { id: o.id, name: node.name, score: o.score, checks: o.checks.map((c) => ({ text: node.advice[c.idea].text, status: c.status, note: c.note })) }
+    })
+  return { score: onlyNode ? openings[0]?.score ?? null : a.score, openings }
+}
+
+/** Progress of an advice mission: the games collected since it started and their average. */
+function adviceMissionView(node, progress, history) {
+  const m = progress.advice?.missions[node.id]
+  if (!m) return null
+  const rows = m.status === 'active' ? missionRows(history, m) : []
+  return { status: m.status, startAverage: m.average, threshold: m.threshold, played: rows.length, of: ADVICE_WINDOW, current: average(rows) }
+}
+
+function gameView(game, tree, progress, adviceFor = null) {
   const side = userSide(game, progress.settings.username)
   const opp = side === 'w' ? game.black : game.white
   const deepest = game.moves.length ? deepestNode(tree, game) : null
@@ -73,7 +96,24 @@ function gameView(game, tree, progress) {
     result: side ? userResult(game, side) : null,
     opening: !deepest ? null : isUncovered(progress, deepest.id) ? { id: deepest.id, name: deepest.name } : { hidden: true },
     verdict: { ...v, nodeName: v.node ? tree.byId.get(v.node)?.name : undefined },
+    advice: adviceView(game, tree, progress, adviceFor),
   }
+}
+
+/** How each idea of an opening fared over its last few scored games. */
+function ideaStats(node, history) {
+  const recent = history.slice(-ADVICE_WINDOW)
+  return node.advice.map((a, idea) => {
+    const seen = recent.map((h) => h.checks.find((c) => c.idea === idea)).filter((c) => c && c.score !== null)
+    return { text: a.text, checked: !!a.check, followed: seen.filter((c) => c.status === 'pass').length, of: seen.length }
+  })
+}
+
+/** The ideas followed in fewer than all of the recent games where they came up, worst first. */
+function missedIdeas(node, history) {
+  return ideaStats(node, history)
+    .filter((i) => i.of && i.followed < i.of)
+    .sort((a, b) => a.followed / a.of - b.followed / b.of)
 }
 
 export function stateView(tree, progress, games) {
@@ -93,12 +133,23 @@ export function stateView(tree, progress, games) {
     }
   }
 
+  // Advice missions run beside the two opening missions.
+  missions.advice = tree.nodes
+    .filter((n) => progress.advice?.missions[n.id]?.status === 'active')
+    .map((n) => ({ ...nodeView(n, progress), ...adviceMissionView(n, progress, adviceHistory(tree, progress, games, n)) }))
+
   const events = progress.events
     .filter((e) => !e.seen)
     .map((e) => {
+      if (e.type !== 'completed') {
+        const node = tree.byId.get(e.node)
+        const missed = e.type === 'advice_started' ? missedIdeas(node, adviceHistory(tree, progress, games, node).filter((h) => h.game.end <= e.at)) : []
+        return { id: e.id, type: e.type, at: e.at, node: nodeView(node, progress), average: e.average, threshold: e.threshold, of: ADVICE_WINDOW, missed }
+      }
       const next = e.next ? tree.byId.get(e.next) : null
       return {
         id: e.id,
+        type: e.type,
         at: e.at,
         node: nodeView(tree.byId.get(e.node), progress),
         next: next && {
@@ -113,6 +164,7 @@ export function stateView(tree, progress, games) {
   const recent = games.filter((g) => g.verdict && g.verdict.type !== 'history').slice(-5).reverse()
   return {
     username: progress.settings.username,
+    adviceThreshold: adviceThreshold(progress.settings),
     lastSync: progress.lastSync,
     nodes,
     fog,
@@ -125,7 +177,7 @@ export function stateView(tree, progress, games) {
 
 export function gamesView(tree, progress, games, limit = 300) {
   const list = games.slice(-limit).reverse().map((g) => gameView(g, tree, progress))
-  return { games: list, total: games.length }
+  return { games: list, total: games.length, adviceThreshold: adviceThreshold(progress.settings) }
 }
 
 export function openingsView(tree, progress) {
@@ -159,11 +211,20 @@ export function openingView(tree, progress, games, id) {
   const mission = progress.missions[id]
   const byUuid = new Map(games.map((g) => [g.uuid, g]))
   const fenParam = encodeURIComponent(node.fen)
+  const history = adviceHistory(tree, progress, games, node)
 
   return {
     ...nodeView(node, progress),
     blurb: node.blurb ?? '',
-    ideas: node.ideas ?? [],
+    ideas: ideaStats(node, history),
+    advice: {
+      average: average(history.slice(-ADVICE_WINDOW)),
+      games: Math.min(history.length, ADVICE_WINDOW),
+      of: ADVICE_WINDOW,
+      threshold: adviceThreshold(settings),
+      mission: adviceMissionView(node, progress, history),
+      recent: history.slice(-ADVICE_WINDOW).reverse().map((h) => gameView(h.game, tree, progress, id)),
+    },
     yourMoves: yours.map((p) => formatMove(p.ply, p.san)),
     theirMoves: theirs.map((p) => formatMove(p.ply, p.san)),
     stats: {

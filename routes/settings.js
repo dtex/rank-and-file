@@ -1,9 +1,11 @@
+import { adviceThreshold } from '../services/advice.js'
+
 const TIME_CLASSES = ['bullet', 'blitz', 'rapid', 'daily']
 
 export default async function settingsRoutes(app) {
   app.get('/api/settings', async () => {
     const p = app.ctx.store.loadProgress()
-    return { settings: p.settings, timeClassOptions: TIME_CLASSES, lastSync: p.lastSync }
+    return { settings: { ...p.settings, adviceThreshold: adviceThreshold(p.settings) }, timeClassOptions: TIME_CLASSES, lastSync: p.lastSync }
   })
 
   app.put('/api/settings', async (req, reply) => {
@@ -24,7 +26,11 @@ export default async function settingsRoutes(app) {
       app.ctx.store.reset()
       p = app.ctx.store.loadProgress()
     }
-    p.settings = { username, timeClasses, ratedOnly: body.ratedOnly !== false }
+    const wanted = Number(body.adviceThreshold ?? adviceThreshold(p.settings))
+    if (!Number.isInteger(wanted) || wanted < 0 || wanted > 100) {
+      return reply.code(400).send({ error: 'The advice accuracy target must be a whole number from 0 to 100.' })
+    }
+    p.settings = { username, timeClasses, ratedOnly: body.ratedOnly !== false, adviceThreshold: wanted }
     app.ctx.store.saveProgress(p)
     return { settings: p.settings }
   })

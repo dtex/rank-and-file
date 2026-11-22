@@ -93,6 +93,7 @@ a.mcard:hover { border-color: var(--ink); }
 .pips u.f { background: var(--gold); border-color: var(--gold); }
 .mini { display: grid; gap: 7px; margin-top: 6px; }
 .mini > div { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+.mini .row { flex-wrap: nowrap; flex: none; gap: 5px; }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
 /* pages */
@@ -107,6 +108,14 @@ tr:last-child td { border-bottom: 0; }
 th { font: 500 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
 td.nw { white-space: nowrap; }
 .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+tr.sub td { background: var(--bg); }
+.advice { display: grid; gap: 12px; }
+.marks { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 3px; }
+.marks li { display: grid; grid-template-columns: 16px 1fr; gap: 6px; margin: 0; }
+.marks .mark { font-weight: 700; text-align: center; }
+.marks .pass .mark { color: var(--ok); } .marks .fail .mark { color: var(--bad); } .marks .partial .mark { color: var(--gold); }
+.marks .na { color: var(--muted); }
+.node .st .flag { font-weight: 700; color: var(--gold); background: var(--gold-bg); border-radius: 50%; width: 15px; height: 15px; line-height: 15px; text-align: center; flex: none; }
 
 .detail { display: grid; grid-template-columns: auto minmax(0, 1fr) 270px; gap: 26px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 20px; margin-top: 12px; }
 .detail .board { --sq: 34px; }
@@ -124,7 +133,7 @@ td.nw { white-space: nowrap; }
 
 .form { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 20px; margin-top: 12px; max-width: 520px; display: grid; gap: 16px; }
 .form label { display: block; font-weight: 500; }
-.form input[type=text] { font: 14px var(--body); padding: 7px 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--ink); width: 100%; margin-top: 4px; }
+.form input[type=text], .form input[type=number] { font: 14px var(--body); padding: 7px 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--ink); width: 100%; margin-top: 4px; }
 .form .check { display: flex; gap: 8px; align-items: center; font-weight: 400; margin-top: 6px; }
 
 /* mission complete */

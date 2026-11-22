@@ -1,5 +1,5 @@
 import { html, nothing, svg } from 'lit'
-import { View, api, board, dot, resultWord, sideName, verdict } from './lib.js'
+import { View, accuracy, api, board, dot, resultWord, sideName, verdict } from './lib.js'
 
 const W = 134
 const H = 200
@@ -183,7 +183,8 @@ class CbMap extends View {
       <b>${n.name}</b><span class="mv">${n.lastMove}</span>
       <span class="st">${dot(n.side)}${n.status === 'done'
         ? html`✓ ${n.count}/${n.target}`
-        : html`${n.count}/${n.target}${n.status === 'parked' ? ' parked' : html`<span class="meter"><s style="width:${pct}%"></s></span>`}`}</span>
+        : html`${n.count}/${n.target}${n.status === 'parked' ? ' parked' : html`<span class="meter"><s style="width:${pct}%"></s></span>`}`}${n.adviceMission
+        ? html`<span class="flag" title="Advice mission: follow this opening's ideas more closely">!</span>` : nothing}</span>
     </a>`
   }
 
@@ -202,6 +203,22 @@ class CbMap extends View {
       ${parked.map((p) => html`<div class="row" style="margin-top:6px">
         <span class="muted">Parked: ${p.name} ${p.count}/${p.target}</span>
         <button class="link" ?disabled=${this.busy} @click=${() => this.switchTo({ id: p.id })}>Resume</button></div>`)}`
+  }
+
+  /** "Follow the advice" missions, started when recent games in an opening fall below the target. */
+  renderAdvice() {
+    const list = this.state.missions.advice
+    if (!list.length) return nothing
+    return html`<div>
+      <div class="eyebrow">Advice missions</div>
+      ${list.map((m) => html`<a class="mcard" href="#opening-${m.id}">
+        <span class="chip gold">${dot(m.side)}Follow the advice</span>
+        <h4>${m.name}</h4>
+        <div class="pips">${Array.from({ length: m.of }, (_, i) => html`<u class=${i < m.played ? 'f' : ''}></u>`)}</div>
+        <span class="muted">Your last ${m.of} games here averaged ${m.startAverage}%. Average ${m.threshold}% over ${m.of} new ones${m.played
+          ? html` · ${m.current}% after ${m.played}` : nothing}</span>
+      </a>`)}
+    </div>`
   }
 
   renderAsk() {
@@ -248,12 +265,13 @@ class CbMap extends View {
           <div class="eyebrow">Active missions</div>
           ${this.renderMission('w')}${this.renderMission('b')}
         </div>
+        ${this.renderAdvice()}
         <div>
           <div class="eyebrow">Latest games</div>
           ${s.latest.length
             ? html`<div class="mini">${s.latest.map((g) => html`<div>
                 <span>${dot(g.side)}${resultWord[g.result]} · ${g.opening?.hidden ? html`<span class="hid">undiscovered</span>` : g.opening?.name ?? 'off the map'}</span>
-                <span>${verdict(g.verdict, { short: true })}</span></div>`)}</div>
+                <span class="row">${g.advice?.score != null ? accuracy(g.advice.score, s.adviceThreshold) : nothing}${verdict(g.verdict, { short: true })}</span></div>`)}</div>
               <p style="margin-top:8px"><a href="#games">All games</a></p>`
             : html`<p class="muted" style="margin-top:6px">Nothing yet. Games you finish from now on show up here after a sync.</p>`}
         </div>

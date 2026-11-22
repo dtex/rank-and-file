@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Chess } from 'chess.js'
+import { compileCheck } from './checks.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 export const TREE_FILE = path.join(ROOT, 'data', 'tree.json')
@@ -38,8 +39,12 @@ export function buildTree(raw) {
       }
       keys.push(positionKey(chess.fen()))
     }
+    const ideas = r.ideas ?? []
+    if (r.checks && r.checks.length !== ideas.length) throw new Error(`tree: "${r.id}" needs one check (or null) per idea`)
     const node = {
       ...r,
+      // Each idea with its check; null when the idea is only something to know.
+      advice: ideas.map((text, i) => ({ text, check: r.checks?.[i] ? compileCheck(r.checks[i], `tree: "${r.id}" check ${i + 1}`) : null })),
       plies,
       keys,
       key: keys.at(-1),

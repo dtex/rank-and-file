@@ -1,5 +1,5 @@
 import { html, nothing } from 'lit'
-import { View, api, board, day, dot, resultWord, sideName } from './lib.js'
+import { View, accuracy, adviceDetail, api, board, day, dot, resultWord, sideName } from './lib.js'
 
 const STATUS = { active: 'Active mission', parked: 'Parked mission', done: 'Complete' }
 
@@ -54,6 +54,8 @@ class CbOpening extends View {
     const s = o.stats
     const max = Math.max(1, ...s.elsewhere.map((e) => e.count))
     const pct = s.of ? Math.round((s.reached / s.of) * 100) : 0
+    const a = o.advice
+    const am = a.mission?.status === 'active' ? a.mission : null
     return html`<div class="page">
       <div><a href="#map">← Map</a></div>
       <div class="detail">
@@ -65,7 +67,8 @@ class CbOpening extends View {
           <p style="margin-top:12px">${o.blurb}</p>
           <p><b>Your moves:</b> <span class="mv">${o.yourMoves.join(', ')}</span>
             ${o.theirMoves.length ? html`<br><b>Opponent has to play:</b> <span class="mv">${o.theirMoves.join(', ')}</span>` : nothing}</p>
-          <ul>${o.ideas.map((i) => html`<li>${i}</li>`)}</ul>
+          <ul>${o.ideas.map((i) => html`<li>${i.text}
+            ${i.of ? html`<span class="chip ${i.followed === i.of ? 'ok' : i.followed ? 'gold' : 'bad'}" title="Games where this came up, out of your last ${a.games} scored here">followed ${i.followed} of ${i.of}</span>` : nothing}</li>`)}</ul>
           <div class="row">
             <a class="btn" href=${o.links.chesscom} target="_blank" rel="noopener">Open position on chess.com</a>
             <a class="btn" href=${o.links.lichess} target="_blank" rel="noopener">Lichess explorer</a>
@@ -77,7 +80,15 @@ class CbOpening extends View {
             <span>Games that reached it</span><b>${s.reached} of ${s.of}</b>
             <span>Reach rate</span><b>${pct}%</b>
             <span>Won / drawn / lost</span><b>${s.record.win} / ${s.record.draw} / ${s.record.loss}</b>
+            <span>Advice accuracy${a.games ? `, last ${a.games}` : ''}</span><b>${a.average === null ? '–' : accuracy(a.average, a.threshold)}</b>
           </div>
+          ${am
+            ? html`<div class="mcard" style="margin:0 0 16px"><span class="chip gold">Advice mission</span>
+                <p style="margin:6px 0 0">Your last ${am.of} games here averaged ${am.startAverage}%. Average ${am.threshold}% or better over ${am.of} new games.
+                  ${am.played ? `${am.played} played so far, at ${am.current}%.` : 'None played yet.'}</p></div>`
+            : a.average === null
+              ? html`<p class="muted">Scored on games you finish after uncovering this opening, when its advice comes up.</p>`
+              : nothing}
           ${s.elsewhere.length
             ? html`<div class="eyebrow">Where the other ${s.missed} went</div>
                 <div style="margin-top:8px">${s.elsewhere.map((e) => html`<div class="barrow ${e.mine ? 'mine' : ''}">
@@ -92,6 +103,16 @@ class CbOpening extends View {
         ? html`<div style="margin-top:24px"><div class="eyebrow">From here</div>
             <div class="cards">${o.children.map(openingCard)}</div>
             ${o.hiddenChildren ? html`<p class="muted" style="margin-top:10px">${o.hiddenChildren} hidden opening${o.hiddenChildren === 1 ? '' : 's'} beyond this one.</p>` : nothing}</div>`
+        : nothing}
+
+      ${a.recent.length
+        ? html`<div style="margin-top:24px"><div class="eyebrow">How you followed the advice, latest first</div>
+            <div class="tblwrap"><table>
+              ${a.recent.map((g) => html`<tr>
+                <td class="nw"><a href=${g.url} target="_blank" rel="noopener">${day(g.end)}</a><br>
+                  <span class="muted">${resultWord[g.result]} v ${g.opponent}</span></td>
+                <td>${adviceDetail(g.advice, a.threshold)}</td></tr>`)}
+            </table></div></div>`
         : nothing}
 
       ${o.missionGames.length
