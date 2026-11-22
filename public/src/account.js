@@ -9,8 +9,8 @@ const LOGIN_ERRORS = {
   unavailable: 'That sign-in method is not available.',
 }
 
-const legal = html`<a href="/terms.html" target="_blank" rel="noopener">Terms of Use</a> and
-  <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>`
+const legal = html`<a href="/terms" target="_blank" rel="noopener">Terms of Use</a> and
+  <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>`
 
 /** A centred card for the screens shown before the app itself. */
 const gate = (body) => html`<div class="page gate"><div class="form">

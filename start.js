@@ -21,6 +21,29 @@ try {
 }
 
 const app = buildApp({ pool, config })
+
+// Once a day: drop expired sessions and links, and accounts that never accepted the terms.
+async function cleanup() {
+  try {
+    const removed = await app.ctx.accounts.cleanup()
+    app.log.info(removed, 'cleanup')
+  } catch (err) {
+    app.log.error(err)
+  }
+}
+cleanup()
+setInterval(cleanup, 24 * 3600 * 1000).unref()
+
+if (config.production) {
+  const missing = Object.entries({
+    OPERATOR_NAME: config.legal.operator, CONTACT_EMAIL: config.legal.contact, POSTAL_ADDRESS: config.legal.address,
+    DATA_LOCATION: config.legal.dataLocation, GOVERNING_LAW: config.legal.governingLaw, SMTP_HOST: config.smtp.host,
+    STRIPE_SECRET_KEY: config.stripe.secretKey, STRIPE_WEBHOOK_SECRET: config.stripe.webhookSecret,
+  }).filter(([, value]) => !value).map(([name]) => name)
+  if (missing.length) app.log.warn(`Not set: ${missing.join(', ')}. See .env.example.`)
+  if (!config.secureCookies) app.log.warn('BASE_URL is not https, so the session cookie is not marked Secure.')
+  if (!Object.keys(config.providers).length) app.log.warn('No OAuth provider is set up; only emailed links are offered.')
+}
 try {
   await app.listen({ port, host })
   console.log(`\nChess Buddy is running at ${config.baseUrl}\n`)

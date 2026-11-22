@@ -37,6 +37,14 @@ export function loadConfig(env = process.env) {
       priceMonthly: env.STRIPE_PRICE_MONTHLY || '',
       priceYearly: env.STRIPE_PRICE_YEARLY || '',
     },
+    // Who runs this service, for the privacy policy and terms. See .env.example.
+    legal: {
+      operator: env.OPERATOR_NAME || '',
+      contact: env.CONTACT_EMAIL || '',
+      address: env.POSTAL_ADDRESS || '',
+      dataLocation: env.DATA_LOCATION || '',
+      governingLaw: env.GOVERNING_LAW || '',
+    },
     mailFrom: env.MAIL_FROM || 'Chess Buddy <no-reply@localhost>',
   }
 }

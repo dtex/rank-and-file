@@ -287,6 +287,7 @@ class CbMap extends View {
             : html`<p class="muted" style="margin-top:6px">Nothing yet. Games you finish from now on show up here after a sync.</p>`}
         </div>
         <div class="muted">${s.totals.uncovered} of ${s.totals.openings} openings uncovered · ${s.totals.done} complete</div>
+        <div class="muted"><a href="/privacy" target="_blank" rel="noopener">Privacy</a> · <a href="/terms" target="_blank" rel="noopener">Terms</a></div>
       </aside>`
   }
 }

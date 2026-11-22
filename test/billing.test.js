@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { randomUUID } from 'node:crypto'
 import Stripe from 'stripe'
 import { grantGift } from '../services/entitlement.js'
 import { signIn, testApp, uniqueEmail } from './helpers/app.js'
@@ -8,6 +9,8 @@ const WEBHOOK_SECRET = 'whsec_test'
 const ENV = { STRIPE_SECRET_KEY: 'sk_test_x', STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET, STRIPE_PRICE_MONTHLY: 'price_m', STRIPE_PRICE_YEARLY: 'price_y' }
 const real = new Stripe('sk_test_x')
 const now = () => Math.floor(Date.now() / 1000)
+// Ids must differ between runs: the test database keeps rows from earlier ones.
+const RUN = randomUUID().slice(0, 8)
 let seq = 0
 
 /** A stand-in for Stripe's API that remembers subscriptions. Signatures are checked by the real library. */
@@ -21,7 +24,7 @@ function fakeStripe() {
     checkout: { sessions: {
       create: async (params) => {
         calls.checkout.push(params)
-        const id = `cs_${++seq}`
+        const id = `cs_${RUN}_${++seq}`
         sessions.set(id, { id, client_reference_id: params.client_reference_id, subscription: null })
         return { id, url: `https://checkout.stripe.test/${id}` }
       },
@@ -34,11 +37,11 @@ function fakeStripe() {
 }
 
 const subscription = (userId, over = {}) => ({
-  id: `sub_${++seq}`, customer: `cus_${seq}`, status: 'active', metadata: { user_id: userId }, cancel_at_period_end: false,
+  id: `sub_${RUN}_${++seq}`, customer: `cus_${RUN}_${seq}`, status: 'active', metadata: { user_id: userId }, cancel_at_period_end: false,
   items: { data: [{ price: { recurring: { interval: 'month' } }, current_period_end: now() + 30 * 86400 }] }, ...over,
 })
 
-async function webhook(app, type, object, { id = `evt_${++seq}`, secret = WEBHOOK_SECRET } = {}) {
+async function webhook(app, type, object, { id = `evt_${RUN}_${++seq}`, secret = WEBHOOK_SECRET } = {}) {
   const payload = JSON.stringify({ id, type, data: { object } })
   const signature = real.webhooks.generateTestHeaderString({ payload, secret })
   return app.inject({ method: 'POST', url: '/webhooks/stripe', payload, headers: { 'content-type': 'application/json', 'stripe-signature': signature } })
@@ -137,7 +140,7 @@ test('a webhook is refused without a valid signature and applied only once', asy
   assert.equal(unsigned.statusCode, 400)
   assert.equal((await c.get('/api/me')).json().plan.subscribed, false)
 
-  const id = `evt_once_${++seq}_${c.userId}`
+  const id = `evt_once_${RUN}_${++seq}`
   assert.equal((await webhook(ctx.app, 'customer.subscription.created', sub, { id })).statusCode, 200)
   assert.equal((await c.get('/api/me')).json().plan.subscribed, true)
   sub.status = 'canceled'

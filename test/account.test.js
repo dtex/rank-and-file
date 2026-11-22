@@ -100,3 +100,23 @@ test('cleanup removes expired sessions and accounts that never accepted the term
   assert.deepEqual(left.sort(), [fresh.userId, active.userId].sort())
   assert.equal((await active.get('/api/me')).statusCode, 401, 'the expired session is gone')
 })
+
+test('the privacy policy and terms are public, and every page carries the security headers', async () => {
+  const { app } = await testApp({ env: { OPERATOR_NAME: 'Example Chess Ltd', CONTACT_EMAIL: 'privacy@example.com' } })
+  const privacy = await app.inject({ url: '/privacy' })
+  assert.equal(privacy.statusCode, 200)
+  assert.match(privacy.body, /Example Chess Ltd/)
+  assert.match(privacy.body, /We do not sell your personal information/)
+  assert.match(privacy.body, /\[data location not set\]/, 'a missing detail is shown as a gap')
+  const terms = await app.inject({ url: '/terms' })
+  assert.equal(terms.statusCode, 200)
+  assert.match(terms.body, /\$5 a month or \$50 a year/)
+
+  for (const res of [privacy, await app.inject({ url: '/' }), await app.inject({ url: '/api/me' })]) {
+    assert.match(res.headers['content-security-policy'], /default-src 'self'/)
+    assert.equal(res.headers['x-frame-options'], 'DENY')
+  }
+  assert.equal((await app.inject({ url: '/api/me' })).headers['cache-control'], 'no-store')
+  const page = (await app.inject({ url: '/' })).body
+  assert.equal(/https?:\/\//.test(page), false, 'the page loads nothing from another site')
+})

@@ -14,6 +14,7 @@ import { createStore } from './services/store.js'
 import accountRoutes from './routes/account.js'
 import authRoutes, { SESSION_COOKIE } from './routes/auth.js'
 import billingRoutes, { stripeWebhook } from './routes/billing.js'
+import legalRoutes from './routes/legal.js'
 import missionRoutes from './routes/missions.js'
 import settingsRoutes from './routes/settings.js'
 import syncRoutes from './routes/sync.js'
@@ -53,6 +54,21 @@ export function buildApp({ pool, config = loadConfig(), fetchImpl = fetch, maile
     if (origin && origin !== config.origin) return reply.code(403).send({ error: 'That request came from another site.' })
   })
 
+  // Nothing on these pages needs another site: no outside scripts, fonts, frames or form targets.
+  const csp = [
+    "default-src 'self'", "script-src 'self'", "style-src 'self' 'unsafe-inline'", "img-src 'self' data:", "font-src 'self'",
+    "connect-src 'self'", "form-action 'self'", "frame-ancestors 'none'", "base-uri 'self'", "object-src 'none'",
+  ].join('; ')
+  app.addHook('onSend', async (req, reply) => {
+    reply.header('Content-Security-Policy', csp)
+    reply.header('X-Content-Type-Options', 'nosniff')
+    reply.header('X-Frame-Options', 'DENY')
+    reply.header('Referrer-Policy', 'same-origin')
+    if (config.secureCookies) reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+    // Personal data must not sit in a shared cache.
+    if (req.url.startsWith('/api/') || req.url.startsWith('/auth/')) reply.header('Cache-Control', 'no-store')
+  })
+
   // Errors thrown with a statusCode are messages for the user; anything else is a bug.
   app.setErrorHandler((err, req, reply) => {
     const status = err.statusCode && err.statusCode >= 400 ? err.statusCode : 500
@@ -63,6 +79,7 @@ export function buildApp({ pool, config = loadConfig(), fetchImpl = fetch, maile
 
   app.register(fastifyStatic, { root: path.join(ROOT, 'public') })
   app.register(authRoutes)
+  app.register(legalRoutes)
   app.register(stripeWebhook)
 
   // Everything under /api belongs to the signed-in user and works only on their data.
