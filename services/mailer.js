@@ -33,12 +33,12 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 export function linkEmail({ baseUrl, token, purpose, minutes }) {
   const url = `${baseUrl}/#magic=${token}`
   const change = purpose === 'change_email'
-  const subject = change ? 'Confirm your new email address for Chess Buddy' : 'Your Chess Buddy sign-in link'
-  const lead = change ? 'Confirm this address to use it for your Chess Buddy account:' : 'Use this link to sign in to Chess Buddy:'
+  const subject = change ? 'Confirm your new email address for Rank and File' : 'Your Rank and File sign-in link'
+  const lead = change ? 'Confirm this address to use it for your Rank and File account:' : 'Use this link to sign in to Rank and File:'
   const tail = `The link works once and expires in ${minutes} minutes. If you did not ask for it, you can ignore this email.`
   return {
     subject,
-    text: `${lead}\n\n${url}\n\n${tail}\n`,
-    html: `<p>${esc(lead)}</p><p><a href="${esc(url)}">${change ? 'Confirm this address' : 'Sign in to Chess Buddy'}</a></p><p style="color:#666">${esc(tail)}</p>`,
+    text: `${lead}\n\n${url}\n\n${tail}\n\nRank and File · Chess training for the rest of us\n`,
+    html: `<p>${esc(lead)}</p><p><a href="${esc(url)}">${change ? 'Confirm this address' : 'Sign in to Rank and File'}</a></p><p style="color:#666">${esc(tail)}</p><p style="color:#666">Rank and File · Chess training for the rest of us</p>`,
   }
 }

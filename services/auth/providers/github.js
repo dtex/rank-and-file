@@ -1,5 +1,5 @@
 // GitHub sign-in. `user:email` is needed because the address is often not public.
-const headers = (token) => ({ Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'chess-buddy' })
+const headers = (token) => ({ Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'rank-and-file' })
 
 export default {
   id: 'github',

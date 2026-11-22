@@ -1,9 +1,9 @@
 // Signing in, the consent step, first-time setup, and the account section of Settings.
 import { html, nothing } from 'lit'
-import { View, api } from './lib.js'
+import { TAGLINE, View, api } from './lib.js'
 
 const LOGIN_ERRORS = {
-  'no-email': 'That account has no verified email address, which Chess Buddy needs. Verify it there, or use an email link.',
+  'no-email': 'That account has no verified email address, which Rank and File needs. Verify it there, or use an email link.',
   expired: 'That sign-in attempt timed out. Try again.',
   provider: 'The sign-in could not be completed. Try again.',
   unavailable: 'That sign-in method is not available.',
@@ -14,7 +14,7 @@ const legal = html`<a href="/terms" target="_blank" rel="noopener">Terms of Use<
 
 /** A centred card for the screens shown before the app itself. */
 const gate = (body) => html`<div class="page gate"><div class="form">
-  <a class="brand" href="/">Chess Buddy</a>${body}</div></div>`
+  <div><a class="brand" href="/">Rank and File</a><div class="tagline">${TAGLINE}</div></div>${body}</div></div>`
 
 class CbLogin extends View {
   static properties = { error: {}, options: { state: true }, email: { state: true }, sent: { state: true }, busy: { state: true }, problem: { state: true } }
@@ -64,7 +64,7 @@ class CbLogin extends View {
         </label>
         <button class="pri wide" ?disabled=${this.busy}>${this.busy ? 'Sending…' : 'Email me a sign-in link'}</button>
       </form>
-      <p class="muted" style="margin:0">Chess Buddy keeps your email address to sign you in. See the ${legal}.</p>`)
+      <p class="muted" style="margin:0">Rank and File keeps your email address to sign you in. See the ${legal}.</p>`)
   }
 }
 customElements.define('cb-login', CbLogin)
@@ -90,7 +90,7 @@ class CbMagic extends View {
     if (this.done) return gate(html`<h2>Email address confirmed</h2><p>Your account now uses the new address.</p><a class="btn pri" href="/">Continue</a>`)
     if (this.error) return gate(html`<h2>That link did not work</h2><p>${this.error}</p><a class="btn" href="/">Back to sign-in</a>`)
     return gate(html`<h2>Almost there</h2><p>Select the button to finish.</p>
-      <div><button class="pri" ?disabled=${this.busy} @click=${() => this.confirm()}>${this.busy ? 'One moment…' : 'Continue to Chess Buddy'}</button></div>`)
+      <div><button class="pri" ?disabled=${this.busy} @click=${() => this.confirm()}>${this.busy ? 'One moment…' : 'Continue to Rank and File'}</button></div>`)
   }
 }
 customElements.define('cb-magic', CbMagic)
@@ -168,7 +168,7 @@ class CbWelcome extends View {
   render() {
     return gate(html`
       <div><h2>Which chess.com account is yours?</h2>
-        <p class="muted" style="margin-top:6px">Chess Buddy reads its finished games from chess.com's public records. It never asks for your chess.com password.</p></div>
+        <p class="muted" style="margin-top:6px">Rank and File reads its finished games from chess.com's public records. It never asks for your chess.com password.</p></div>
       <form class="stack" @submit=${(e) => this.save(e)}>
         <label>chess.com username
           <input id="welcome-username" type="text" required autocomplete="off" spellcheck="false" @input=${(e) => (this.username = e.target.value.trim())}>

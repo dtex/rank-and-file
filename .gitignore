@@ -156,6 +156,6 @@ vite.config.ts.timestamp-*
 .nx/workspace-data
 .nx/migrate-runs
 
-# chess-buddy
+# rank-and-file
 public/dist
 *.tmp

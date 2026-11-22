@@ -46,7 +46,7 @@ if (config.production) {
 }
 try {
   await app.listen({ port, host })
-  console.log(`\nChess Buddy is running at ${config.baseUrl}\n`)
+  console.log(`\nRank and File is running at ${config.baseUrl}\n`)
 } catch (err) {
   app.log.error(err)
   process.exit(1)

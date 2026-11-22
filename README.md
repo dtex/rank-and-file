@@ -1,6 +1,6 @@
-# chess-buddy
+# Rank and File
 
-Opening missions tracked against your chess.com games, for any number of players.
+Chess training for the rest of us. Opening missions tracked against your chess.com games, for any number of players.
 
 ## Opening missions
 
@@ -28,9 +28,9 @@ You need Node 20.12 or newer and Postgres running on the same machine.
 ```
 npm install
 cp .env.example .env    # then fill it in; every setting is explained there
-npm run migrate         # creates the chess_buddy database and its tables
+npm run migrate         # creates the rank_and_file database and its tables
 npm start               # builds the front end, then serves http://localhost:3210
-npm test                # uses its own database, chess_buddy_test
+npm test                # uses its own database, rank_and_file_test
 ```
 
 With an empty `.env` the app still runs for development: sign-in links are printed in the
@@ -97,7 +97,7 @@ is meant for an organisation's own mail and has sending limits.
 
 ## Storage
 
-Everything lives in a local Postgres database (`chess_buddy` by default; set `DATABASE_URL` to
+Everything lives in a local Postgres database (`rank_and_file` by default; set `DATABASE_URL` to
 use another). `npm start` applies pending migrations from `migrations/`. `data/tree.json` is the
 opening flowchart and stays in the repository.
 

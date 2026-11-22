@@ -1,7 +1,7 @@
 // chess.com public API client. No login needed. Requests go out one at a time,
 // across all users, because the API rejects parallel bursts from one address.
 const BASE = 'https://api.chess.com/pub'
-const USER_AGENT = process.env.CHESSCOM_USER_AGENT || 'chess-buddy/0.3 (opening tracker)'
+const USER_AGENT = process.env.CHESSCOM_USER_AGENT || 'rank-and-file/1.0 (opening tracker)'
 const STANDARD_START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
 /** How many plies of each game are kept. Openings are decided well before this. */

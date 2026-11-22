@@ -1,11 +1,11 @@
-// Tests that touch storage run against a real local database, chess_buddy_test,
+// Tests that touch storage run against a real local database, rank_and_file_test,
 // created and migrated on first use. Each test works on its own new user, so
 // nothing needs wiping between tests.
 import pg from 'pg'
 import { ensureDatabase, migrate } from '../../services/db.js'
 import { createStore } from '../../services/store.js'
 
-export const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgres://localhost/chess_buddy_test'
+export const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgres://localhost/rank_and_file_test'
 
 let ready = null
 export function testPool() {

@@ -102,8 +102,8 @@ export default async function authRoutes(app) {
   // Unsubscribe from marketing email without signing in. The link in an email
   // opens the confirmation page; mail clients' one-click unsubscribe posts directly.
   const page = (body) => `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Chess Buddy email preferences</title><link rel="stylesheet" href="/app.css">
-<body><div class="page"><div class="form">${body}<p><a href="/">Chess Buddy</a></p></div></div></body></html>`
+<title>Rank and File email preferences</title><link rel="stylesheet" href="/app.css">
+<body><div class="page"><div class="form">${body}<p><a href="/">Rank and File</a> <span class="tagline">Chess training for the rest of us</span></p></div></div></body></html>`
 
   app.get('/unsubscribe', async (req, reply) => {
     const ok = accounts.readUnsubscribeToken(req.query.t)
@@ -118,6 +118,6 @@ export default async function authRoutes(app) {
     reply.type('text/html')
     if (!userId) return reply.code(400).send(page('<h2>This link is not valid</h2>'))
     await accounts.setMarketing(userId, false, 'unsubscribe_link')
-    return page('<h2>You are unsubscribed</h2><p>You will not get news and tips emails from Chess Buddy.</p>')
+    return page('<h2>You are unsubscribed</h2><p>You will not get news and tips emails from Rank and File.</p>')
   })
 }

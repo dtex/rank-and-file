@@ -25,7 +25,7 @@ export default async function accountRoutes(app) {
   app.post('/api/account/consent', async (req, reply) => {
     const { age, terms, marketing } = req.body || {}
     if (age !== true || terms !== true) {
-      return reply.code(400).send({ error: 'Confirm your age and accept the terms to use Chess Buddy.' })
+      return reply.code(400).send({ error: 'Confirm your age and accept the terms to use Rank and File.' })
     }
     if (!req.user.accepted_terms_at) await accounts.acceptTerms(req.user.id, { marketing: marketing === true })
     return { ok: true }
@@ -57,7 +57,7 @@ export default async function accountRoutes(app) {
   })
 
   app.get('/api/account/export', async (req, reply) => {
-    reply.header('Content-Disposition', 'attachment; filename="chess-buddy-data.json"')
+    reply.header('Content-Disposition', 'attachment; filename="rank-and-file-data.json"')
     return accounts.exportData(req.user.id)
   })
 

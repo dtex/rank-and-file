@@ -43,7 +43,7 @@ try {
     console.log(n ? `Revoked ${n} gift${n === 1 ? '' : 's'} for ${email}.` : `No gifts in force for ${email}.`)
   } else {
     await grantGift(pool, { email, days, note })
-    console.log(`Gifted ${days} days to ${email}. It starts when they next use Chess Buddy signed in with that address.`)
+    console.log(`Gifted ${days} days to ${email}. It starts when they next use Rank and File signed in with that address.`)
   }
 } finally {
   await pool.end()

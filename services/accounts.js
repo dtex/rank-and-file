@@ -7,7 +7,7 @@ export const POLICY_VERSION = '2026-11-22'
 export const CONSENT_TEXT = {
   age: 'I am 16 or older.',
   terms: 'I accept the Terms of Use and have read the Privacy Policy.',
-  marketing: 'Send me news and tips about Chess Buddy by email. This is optional and you can change it at any time in Settings.',
+  marketing: 'Send me news and tips about Rank and File by email. This is optional and you can change it at any time in Settings.',
 }
 
 export const SESSION_DAYS = 30

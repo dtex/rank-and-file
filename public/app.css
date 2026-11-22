@@ -39,6 +39,7 @@ p { margin: 0 0 10px; }
 /* top bar */
 .bar { display: flex; align-items: center; gap: 18px; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .brand { font: 700 17px var(--display); color: var(--ink); text-decoration: none; }
+.tagline { color: var(--muted); font-size: 13px; }
 .tabs { display: flex; gap: 4px; }
 .tab { padding: 5px 11px; color: var(--muted); border-radius: 4px; text-decoration: none; }
 .tab:hover { color: var(--ink); }

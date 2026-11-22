@@ -13,8 +13,8 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 const PLANS = [
-  { env: 'STRIPE_PRICE_MONTHLY', key: 'chess_buddy_monthly', amount: 500, interval: 'month' },
-  { env: 'STRIPE_PRICE_YEARLY', key: 'chess_buddy_yearly', amount: 5000, interval: 'year' },
+  { env: 'STRIPE_PRICE_MONTHLY', key: 'rank_and_file_monthly', amount: 500, interval: 'month' },
+  { env: 'STRIPE_PRICE_YEARLY', key: 'rank_and_file_yearly', amount: 5000, interval: 'year' },
 ]
 
 const existing = await stripe.prices.list({ lookup_keys: PLANS.map((p) => p.key), active: true })
@@ -22,7 +22,7 @@ let productId = existing.data[0]?.product
 for (const plan of PLANS) {
   let price = existing.data.find((p) => p.lookup_key === plan.key)
   if (!price) {
-    productId ??= (await stripe.products.create({ name: 'Chess Buddy membership' })).id
+    productId ??= (await stripe.products.create({ name: 'Rank and File membership' })).id
     price = await stripe.prices.create({ product: productId, currency: 'usd', unit_amount: plan.amount, recurring: { interval: plan.interval }, lookup_key: plan.key })
   }
   console.log(`${plan.env}=${price.id}`)

@@ -6,7 +6,7 @@ import pg from 'pg'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 export const MIGRATIONS_DIR = path.join(ROOT, 'migrations')
-export const DEFAULT_DATABASE_URL = 'postgres://localhost/chess_buddy'
+export const DEFAULT_DATABASE_URL = 'postgres://localhost/rank_and_file'
 
 // bigint columns hold unix seconds, which fit a JS number.
 pg.types.setTypeParser(20, Number)

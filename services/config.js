@@ -45,6 +45,6 @@ export function loadConfig(env = process.env) {
       dataLocation: env.DATA_LOCATION || '',
       governingLaw: env.GOVERNING_LAW || '',
     },
-    mailFrom: env.MAIL_FROM || 'Chess Buddy <no-reply@localhost>',
+    mailFrom: env.MAIL_FROM || 'Rank and File <no-reply@localhost>',
   }
 }

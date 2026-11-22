@@ -7,6 +7,9 @@ export class View extends LitElement {
   }
 }
 
+/** The name and what it stands for, shown together wherever the app introduces itself. */
+export const TAGLINE = 'Chess training for the rest of us'
+
 export async function api(path, { method = 'GET', body } = {}) {
   const res = await fetch(path, {
     method,

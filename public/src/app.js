@@ -1,5 +1,5 @@
 import { html, nothing } from 'lit'
-import { View, api, ago, board, dot, sideName } from './lib.js'
+import { TAGLINE, View, api, ago, board, dot, sideName } from './lib.js'
 import './map.js'
 import './settings.js'
 import './games.js'
@@ -83,7 +83,7 @@ class CbApp extends View {
       this.me = await api('/api/me')
     } catch (err) {
       this.me = null
-      if (err.status !== 401) this.notice = { err: true, text: `Could not reach Chess Buddy. ${err.message}` }
+      if (err.status !== 401) this.notice = { err: true, text: `Could not reach Rank and File. ${err.message}` }
     }
     if (this.ready && !wasReady) {
       await this.load()
@@ -223,7 +223,7 @@ class CbApp extends View {
     const tab = this.route.name === 'opening' ? 'openings' : this.route.name
     return html`
       <header class="bar">
-        <a class="brand" href="#map">Chess Buddy</a>
+        <a class="brand" href="#map" title=${TAGLINE}>Rank and File</a>
         <nav class="tabs">${TABS.map(([id, label]) => html`<a class="tab ${tab === id ? 'on' : ''}" href="#${id}">${label}</a>`)}</nav>
         <span class="sp"></span>
         ${this.state ? html`<span class="muted">${this.state.username} · synced ${ago(this.state.lastSync)}</span>` : nothing}

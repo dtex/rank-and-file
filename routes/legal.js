@@ -12,11 +12,11 @@ const layout = (title, body) => `<!doctype html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${title} · Chess Buddy</title>
+  <title>${title} · Rank and File</title>
   <link rel="stylesheet" href="/app.css">
 </head>
 <body>
-  <header class="bar"><a class="brand" href="/">Chess Buddy</a><span class="sp"></span><a href="/privacy">Privacy</a><a href="/terms">Terms</a></header>
+  <header class="bar"><a class="brand" href="/">Rank and File</a><span class="tagline">Chess training for the rest of us</span><span class="sp"></span><a href="/privacy">Privacy</a><a href="/terms">Terms</a></header>
   <div class="page"><article class="legal">
     <h1>${title}</h1>
     <p class="muted">Version ${POLICY_VERSION}</p>
@@ -33,7 +33,7 @@ export default async function legalRoutes(app) {
   const contact = legal.contact ? `<a href="mailto:${esc(legal.contact)}">${esc(legal.contact)}</a>` : v('', 'contact email')
 
   app.get('/privacy', async (req, reply) => reply.type('text/html').send(layout('Privacy Policy', `
-    <p>Chess Buddy is run by ${operator} (“we”). This page says what we keep about you, why, and what you can do about it.
+    <p>Rank and File is run by ${operator} (“we”). This page says what we keep about you, why, and what you can do about it.
       Questions and requests go to ${contact}${legal.address ? `, or by post to ${esc(legal.address)}` : ''}.</p>
 
     <h2>What we keep</h2>
@@ -92,21 +92,21 @@ export default async function legalRoutes(app) {
       If you are in the EU or UK you may complain to your data protection authority. If you are in California, the rights above are your rights to know, correct and delete under the CCPA, and an agent you authorise may make a request for you.</p>
 
     <h2>Children</h2>
-    <p>Chess Buddy is for people aged 16 and over, and we ask you to confirm that when you first sign in. If you believe a younger person has an account, tell us and we will delete it.</p>
+    <p>Rank and File is for people aged 16 and over, and we ask you to confirm that when you first sign in. If you believe a younger person has an account, tell us and we will delete it.</p>
 
     <h2>Changes</h2>
     <p>If this policy changes in a way that matters, we will tell you in the app before it takes effect. The version date is at the top.</p>`)))
 
   app.get('/terms', async (req, reply) => reply.type('text/html').send(layout('Terms of Use', `
-    <p>These terms are an agreement between you and ${operator} (“we”) for using Chess Buddy. Contact: ${contact}.</p>
+    <p>These terms are an agreement between you and ${operator} (“we”) for using Rank and File. Contact: ${contact}.</p>
 
     <h2>The service</h2>
-    <p>Chess Buddy gives you opening missions and tracks them against the finished games chess.com publishes for the username you give us.
+    <p>Rank and File gives you opening missions and tracks them against the finished games chess.com publishes for the username you give us.
       It is a study aid for after your games. Do not consult it during a game: that would break chess.com’s fair play rules.
-      Chess Buddy is not affiliated with or endorsed by chess.com.</p>
+      Rank and File is not affiliated with or endorsed by chess.com.</p>
 
     <h2>Your account</h2>
-    <p>You must be 16 or older. You sign in with Google, GitHub or a link sent to your email; keep access to that email account secure, because it opens your Chess Buddy account.
+    <p>You must be 16 or older. You sign in with Google, GitHub or a link sent to your email; keep access to that email account secure, because it opens your Rank and File account.
       Give us only a chess.com username that is yours.</p>
 
     <h2>Free use and membership</h2>
@@ -127,7 +127,7 @@ export default async function legalRoutes(app) {
     <p>Do not try to get at other people’s data, disrupt the service, or use it to break chess.com’s rules. We may suspend an account that does.</p>
 
     <h2>Availability and liability</h2>
-    <p>Chess Buddy depends on chess.com’s public data and is provided as it is, without a promise that it will always be available or free of mistakes.
+    <p>Rank and File depends on chess.com’s public data and is provided as it is, without a promise that it will always be available or free of mistakes.
       To the extent the law allows, our liability to you is limited to what you paid us in the 12 months before the claim. Nothing here limits rights you have as a consumer that cannot be limited.</p>
 
     <h2>Ending</h2>
