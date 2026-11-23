@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comp 4 · Transit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Direction: a transit diagram. Openings are stations, lines are the moves between them: a solid black line is a
+   Black move, a hollow one a White move. Boards appear only where you are playing now. Signage type, one yellow. */
+:root {
+  --page: #F5F3EC; --ink: #111111; --grey: #77746B; --soft: #DAD6CA; --yellow: #FFD200; --blue: #0B4EA2;
+  --sq-l: #E3E8EB; --sq-d: #8CA2AE; --pw: #FFFFFF; --pb: #1B222A;
+  --sans: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --mono: "DM Mono", ui-monospace, Menlo, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 500 15px/1.4 var(--sans); }
+a { color: inherit; }
+.board { display: grid; grid-template-columns: repeat(8, var(--sq)); grid-auto-rows: var(--sq); font-size: calc(var(--sq) * .8); line-height: var(--sq); text-align: center; width: calc(var(--sq) * 8); flex: none; }
+.board i { font-style: normal; background: var(--sq-l); color: var(--pb); font-family: "Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols2", sans-serif; }
+.board i.d { background: var(--sq-d); }
+.board i.w { color: var(--pw); text-shadow: 0 0 1px #000, 0 0 1px #000, 0 0 2px #000; }
+
+.bar { display: flex; align-items: center; gap: 30px; padding: 14px 32px; border-bottom: 6px solid var(--ink); }
+.brand { font: 900 26px/1 var(--sans); letter-spacing: -.02em; display: flex; align-items: center; gap: 12px; }
+.brand i { width: 30px; height: 30px; border-radius: 50%; border: 7px solid var(--ink); background: var(--yellow); }
+.brand small { font: 500 13px var(--sans); letter-spacing: 0; color: var(--grey); margin-left: 4px; }
+.tabs { display: flex; gap: 6px; margin-left: 12px; }
+.tabs a { font: 700 15px var(--sans); text-decoration: none; padding: 6px 14px; border-radius: 999px; }
+.tabs a.on { background: var(--ink); color: var(--page); }
+.bar .r { margin-left: auto; font: 400 13px var(--mono); color: var(--grey); display: flex; gap: 16px; align-items: center; }
+.bar button { font: 700 14px var(--sans); background: var(--yellow); border: 0; padding: 9px 16px; border-radius: 999px; color: var(--ink); }
+
+.label { font: 400 12px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--grey); padding: 24px 32px 10px; }
+.screen { margin: 0 32px; display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: start; }
+
+/* map */
+.viewport { padding: 26px 20px 20px; overflow: auto; }
+.canvas { position: relative; }
+.canvas svg { position: absolute; left: 0; top: 0; overflow: visible; }
+.e { stroke: var(--ink); stroke-width: 8; stroke-linejoin: round; }
+.e.core { stroke: var(--page); stroke-width: 3.5; }
+.e.fog { stroke: #A8A498; stroke-width: 4; stroke-dasharray: 1 9; stroke-linecap: round; }
+.tile { position: absolute; }
+.stn { height: 100%; position: relative; padding: 0 8px 26px 30px; display: flex; flex-direction: column; justify-content: flex-end; }
+.stn .nm { font: 700 16px/1.1 var(--sans); letter-spacing: -.01em; }
+.stn .sub { font: 400 12px var(--mono); color: var(--grey); margin-top: 2px; }
+.stn .dot { position: absolute; left: 0; bottom: 4px; width: 20px; height: 20px; border-radius: 50%; border: 5px solid var(--ink); background: var(--page); z-index: 1; }
+.done .dot { background: var(--ink); }
+.done .dot::after { content: "✓"; color: var(--page); font: 900 10px/10px var(--sans); position: absolute; inset: 0; text-align: center; }
+.active .dot { width: 28px; height: 28px; left: -4px; bottom: 0; background: var(--yellow); border-width: 6px; }
+.start .dot { width: 26px; height: 26px; left: -3px; bottom: 1px; border-radius: 4px; background: var(--ink); }
+.thru { position: absolute; left: 10px; right: 0; bottom: 10px; height: 8px; background: var(--ink); }
+.thru.w { background: var(--page); border: solid var(--ink); border-width: 2.25px 0; }
+.thru.fog { height: 4px; bottom: 12px; background: radial-gradient(circle, #A8A498 2px, transparent 2.2px) 0 0 / 10px 4px; }
+.active .stn { padding-bottom: 36px; }
+.active .nm { font-weight: 900; font-size: 18px; }
+.here { align-self: flex-start; white-space: nowrap; background: var(--yellow); font: 700 10.5px var(--sans); letter-spacing: .08em; text-transform: uppercase; padding: 2px 7px; margin-bottom: 6px; }
+.active .board { margin-bottom: 8px; border: 3px solid var(--ink); }
+.fogs { height: 100%; position: relative; padding-left: 26px; display: flex; align-items: center; font: 400 12px var(--mono); color: var(--grey); }
+.fogs .dot { position: absolute; left: 3px; top: 50%; margin-top: -7px; width: 14px; height: 14px; border-radius: 50%; border: 3px solid #A8A498; background: var(--page); }
+.fogs .dot.b { background: #A8A498; }
+.key { display: flex; gap: 24px; font: 400 12px var(--mono); color: var(--grey); padding: 18px 20px 0; border-top: 1px solid var(--soft); margin-top: 10px; align-items: center; flex-wrap: wrap; }
+.key span { display: flex; align-items: center; gap: 8px; }
+.key b { width: 34px; height: 8px; background: var(--ink); display: block; }
+.key b.w { background: var(--page); border: solid var(--ink); border-width: 2.25px 0; }
+.key b.f { height: 4px; background: radial-gradient(circle, #A8A498 2px, transparent 2.2px) 0 0 / 10px 4px; }
+
+/* sidebar: a departures board */
+.dep { background: var(--ink); color: #F2EFE6; padding: 20px 22px 24px; }
+.dep h3 { font: 400 12px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--yellow); margin: 0 0 12px; }
+.dep h3:not(:first-child) { margin-top: 28px; }
+.svc { border-top: 1px solid #3A3A38; padding: 12px 0 14px; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; }
+.svc .who { font: 400 12px var(--mono); color: #A3A099; grid-column: 1 / -1; }
+.svc .nm { font: 700 21px/1.1 var(--sans); }
+.svc .ct { font: 500 26px/1 var(--mono); color: var(--yellow); grid-row: 2 / 4; grid-column: 2; align-self: center; }
+.svc .mv { font: 400 13px var(--mono); color: #A3A099; }
+.svc .track { grid-column: 1 / -1; display: flex; gap: 3px; margin-top: 10px; }
+.svc .track i { flex: 1; height: 6px; background: #3A3A38; } .svc .track i.on { background: var(--yellow); }
+.svc p { grid-column: 1 / -1; margin: 8px 0 0; font-size: 13px; color: #A3A099; }
+.row { display: grid; grid-template-columns: 54px 1fr; gap: 0 10px; border-top: 1px solid #3A3A38; padding: 8px 0; font: 400 13px/1.35 var(--mono); }
+.row b { font-weight: 500; color: var(--yellow); } .row span { color: #A3A099; }
+.dep .tot { font: 400 12px var(--mono); color: #A3A099; margin-top: 16px; }
+
+/* strategy card: a station sign */
+.sign { margin: 0 32px 70px; }
+.plate { background: var(--ink); color: var(--page); padding: 22px 30px 24px; display: grid; grid-template-columns: auto 1fr auto; gap: 24px; align-items: center; }
+.rnd { width: 92px; height: 92px; border-radius: 50%; background: var(--page); border: 14px solid var(--yellow); display: grid; place-items: center; font: 900 28px var(--sans); color: var(--ink); }
+.plate h2 { font: 900 60px/.95 var(--sans); letter-spacing: -.03em; margin: 0; }
+.plate .sub { font: 400 15px var(--mono); color: #B9B6AD; margin-top: 8px; }
+.plate .ct { text-align: right; font: 400 12px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: #B9B6AD; }
+.plate .ct b { display: block; font: 500 54px/1 var(--mono); color: var(--yellow); letter-spacing: 0; }
+.strip { background: var(--yellow); padding: 18px 30px 14px; display: flex; align-items: flex-start; }
+.stop { flex: 1; position: relative; padding-top: 38px; font: 700 15px var(--sans); }
+.stop::before { content: ""; position: absolute; left: 0; right: 0; top: 6px; height: 8px; background: var(--ink); }
+.stop.w::before { background: var(--yellow); border: solid var(--ink); border-width: 2.25px 0; }
+.stop:last-child::before { display: none; }
+.stop::after { content: ""; position: absolute; left: 0; top: 0; width: 20px; height: 20px; border-radius: 50%; background: var(--page); border: 5px solid var(--ink); }
+.stop.now::after { width: 26px; height: 26px; top: -3px; left: -3px; border-width: 7px; }
+.stop small { display: block; font: 400 12px var(--mono); }
+.body { display: grid; grid-template-columns: auto 1fr 320px; gap: 36px; padding: 30px 0 0; }
+.body .board { border: 4px solid var(--ink); }
+.h { font: 400 12px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--grey); margin: 0 0 8px; }
+.lead { font: 500 20px/1.35 var(--sans); margin: 0 0 24px; }
+.ideas { list-style: none; margin: 0 0 24px; padding: 0; }
+.ideas li { display: grid; grid-template-columns: 40px 1fr; align-items: start; padding: 12px 0; border-top: 2px solid var(--ink); font-size: 17px; }
+.ideas li > b { width: 26px; height: 26px; border-radius: 50%; background: var(--ink); color: var(--page); display: grid; place-items: center; font: 700 13px var(--sans); }
+.ideas small { display: inline-block; margin-top: 6px; background: var(--yellow); font: 700 11px var(--sans); letter-spacing: .06em; text-transform: uppercase; padding: 2px 7px; }
+.btns { display: flex; gap: 8px; }
+.btns a { font: 700 14px var(--sans); text-decoration: none; padding: 9px 16px; border-radius: 999px; border: 2px solid var(--ink); }
+.btns a:first-child { background: var(--ink); color: var(--page); }
+.tt { width: 100%; border-collapse: collapse; margin-bottom: 26px; }
+.tt td { border-top: 2px solid var(--ink); padding: 8px 0; } .tt td:last-child { text-align: right; font: 500 17px var(--mono); }
+.tt tr:last-child td { border-bottom: 2px solid var(--ink); }
+.else { display: grid; grid-template-columns: 60px 1fr 26px; gap: 8px 10px; align-items: center; font: 400 13px var(--mono); }
+.else i { height: 8px; background: var(--ink); display: block; border-radius: 0 4px 4px 0; }
+.else .mine + i { background: var(--yellow); outline: 2px solid var(--ink); outline-offset: -2px; }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="brand"><i></i>Rank and File<small>Chess training for the rest of us</small></div>
+  <nav class="tabs"><a class="on" href="#">Map</a><a href="#">Games</a><a href="#">Openings</a><a href="#">Settings</a></nav>
+  <div class="r"><span>dtexus · synced 3 min ago</span><button>Check for new games</button></div>
+</header>
+
+<div class="label">Map</div>
+<div class="screen">
+  <div><div class="viewport" id="map"></div>
+    <div class="key"><span><b class="w"></b>White move</span><span><b></b>Black move</span><span><b class="f"></b>Not yet uncovered</span></div></div>
+  <aside class="dep" id="side"></aside>
+</div>
+
+<div class="label">Strategy card</div>
+<div class="sign" id="card"></div>
+
+<script src="comp.js"></script>
+<script>
+const { board, sideName, card: c } = Comp
+Comp.nav('4-transit')
+const W = 168
+// The line runs along the bottom of each station, under its name.
+const thru = (n) => !n.kids.length ? '' : `<span class="thru ${n.kids.every((k) => k.fog) ? 'fog' : n.kids[0].side}"></span>`
+
+Comp.map(document.getElementById('map'), {
+  W, GAP_X: 34, GAP_Y: 10, edge: 'diag',
+  height: (n) => (n.fog ? 30 : n.status === 'active' ? 238 : 76),
+  out: (it) => [W, it.h - 14],
+  into: (it) => [10, it.n.fog ? it.h / 2 : it.h - 14],
+  node: (n) => n.status === 'start'
+    ? `<div class="stn"><div class="nm">Start</div><div class="sub">the first move</div><span class="dot"></span>${thru(n)}</div>`
+    : `<div class="stn">
+        ${n.status === 'active' ? `<span class="here">Your ${sideName(n.side)} mission</span>${board(n.fen, { flip: n.side === 'b', sq: 13 })}` : ''}
+        <div class="nm">${n.name}</div><div class="sub">${n.move} · ${n.count}/${n.target}</div>
+        <span class="dot"></span>${thru(n)}</div>`,
+  fog: (n) => `<div class="fogs"><span class="dot ${n.side}"></span>${sideName(n.side)} · hidden</div>`,
+})
+// A White move is a hollow line: the same path again, thinner, in the page colour.
+document.querySelectorAll('#map .e.s-w:not(.fog)').forEach((p) => {
+  const core = p.cloneNode()
+  core.classList.add('core')
+  p.parentNode.append(core)
+})
+
+document.getElementById('side').innerHTML = `
+  <h3>Active missions</h3>
+  ${Comp.missions.map((m) => `<div class="svc">
+    <div class="who">${sideName(m.side).toUpperCase()} LINE</div>
+    <div class="nm">${m.name}</div><div class="ct">${m.count}/${m.target}</div><div class="mv">${m.moves}</div>
+    <div class="track">${Array.from({ length: m.target }, (_, i) => `<i class="${i < m.count ? 'on' : ''}"></i>`).join('')}</div>
+    <p>${m.reach}.</p></div>`).join('')}
+  <h3>Latest games</h3>
+  ${Comp.latest.map((g) => `<div class="row"><b>${g.result.toUpperCase()}</b><div>${g.opening === 'undiscovered' ? 'A hidden line' : g.opening}<br><span>${sideName(g.side)} · ${g.verdict}</span></div></div>`).join('')}
+  <div class="tot">4 of 60 openings uncovered · 2 complete</div>`
+
+const max = Math.max(...c.elsewhere.map((e) => e.count))
+document.getElementById('card').innerHTML = `
+  <div class="plate">
+    <div class="rnd">${c.eco}</div>
+    <div><h2>${c.name}</h2><div class="sub">${sideName(c.side)} line · ${c.moves} · active mission</div></div>
+    <div class="ct">Reached<b>${c.count}/${c.target}</b></div>
+  </div>
+  <div class="strip">
+    <div class="stop w">Start<small>&nbsp;</small></div>
+    <div class="stop">King's Pawn<small>1.e4 · you</small></div>
+    <div class="stop w">Open Game<small>1...e5 · opponent</small></div>
+    <div class="stop now">King's Knight<small>2.Nf3 · you are here</small></div>
+  </div>
+  <div class="body">
+    <div>${board(c.fen, { sq: 36 })}</div>
+    <div>
+      <p class="lead">${c.blurb}</p>
+      <div class="h">Ideas</div>
+      <ol class="ideas">${c.ideas.map((i, n) => `<li><b>${n + 1}</b><span>${i.text}${i.of ? `<br><small>Followed ${i.followed} of ${i.of}</small>` : ''}</span></li>`).join('')}</ol>
+      <div class="btns"><a href="#">Open position on chess.com</a><a href="#">Lichess explorer</a></div>
+    </div>
+    <div>
+      <div class="h">Your record here, as ${sideName(c.side)}</div>
+      <table class="tt">
+        <tr><td>Games that reached it</td><td>${c.stats.reached} of ${c.stats.of}</td></tr>
+        <tr><td>Reach rate</td><td>${c.stats.pct}%</td></tr>
+        <tr><td>Won / drawn / lost</td><td>${c.stats.win} / ${c.stats.draw} / ${c.stats.loss}</td></tr>
+        <tr><td>Advice accuracy, last ${c.stats.scored}</td><td>${c.stats.accuracy}%</td></tr>
+      </table>
+      <div class="h">Where the other ${c.stats.of - c.stats.reached} went</div>
+      <div class="else">${c.elsewhere.map((e) => `<span class="${e.mine ? 'mine' : ''}">${e.move}</span><i style="width:${(e.count / max) * 100}%"></i><span>${e.count}</span>`).join('')}</div>
+      <p style="font:400 12px var(--mono);color:var(--grey);margin-top:10px">Yellow: you left the line yourself.</p>
+    </div>
+  </div>`
+</script>
+</body>
+</html>
