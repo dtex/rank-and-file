@@ -1,6 +1,6 @@
 // Signing in, the consent step, first-time setup, and the account section of Settings.
 import { html, nothing } from 'lit'
-import { TAGLINE, View, api } from './lib.js'
+import { TAGLINE, View, api, wordmark } from './lib.js'
 
 const LOGIN_ERRORS = {
   'no-email': 'That account has no verified email address, which Rank and File needs. Verify it there, or use an email link.',
@@ -14,7 +14,7 @@ const legal = html`<a href="/terms" target="_blank" rel="noopener">Terms of Use<
 
 /** A centred card for the screens shown before the app itself. */
 const gate = (body) => html`<div class="page gate"><div class="form">
-  <div><a class="brand" href="/">Rank and File</a><div class="tagline">${TAGLINE}</div></div>${body}</div></div>`
+  <div class="head">${wordmark('/')}<div class="tagline">${TAGLINE}</div></div>${body}</div></div>`
 
 class CbLogin extends View {
   static properties = { error: {}, options: { state: true }, email: { state: true }, sent: { state: true }, busy: { state: true }, problem: { state: true } }
@@ -56,7 +56,7 @@ class CbLogin extends View {
       ${this.problem ? html`<p style="color:var(--bad);margin:0" role="alert">${this.problem}</p>` : nothing}
       ${this.options.providers.length
         ? html`<div class="stack">${this.options.providers.map((p) => html`<a class="btn wide" href="/auth/${p.id}/start">Continue with ${p.name}</a>`)}</div>
-            <div class="eyebrow" style="text-align:center">or</div>`
+            <div class="fine" style="text-align:center">or</div>`
         : nothing}
       <form class="stack" @submit=${(e) => this.send(e)}>
         <label>Email address
@@ -255,7 +255,7 @@ class CbAccount extends View {
       ${this.confirmDelete
         ? html`<div class="mcard ask" style="margin:0">
             <p>This permanently deletes your account: your email address, games, missions and consent records. It cannot be undone.</p>
-            <div class="row"><button class="pri" style="background:var(--bad);border-color:var(--bad)" ?disabled=${this.busy} @click=${() => this.remove()}>Delete my account</button>
+            <div class="row"><button class="pri" style="background:var(--bad);border-color:var(--bad);color:var(--bg)" ?disabled=${this.busy} @click=${() => this.remove()}>Delete my account</button>
               <button @click=${() => (this.confirmDelete = false)}>Cancel</button></div>
           </div>`
         : nothing}

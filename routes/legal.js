@@ -16,7 +16,11 @@ const layout = (title, body) => `<!doctype html>
   <link rel="stylesheet" href="/app.css">
 </head>
 <body>
-  <header class="bar"><a class="brand" href="/">Rank and File</a><span class="tagline">Chess training for the rest of us</span><span class="sp"></span><a href="/privacy">Privacy</a><a href="/terms">Terms</a></header>
+  <header class="mast">
+    <a class="brand" href="/" aria-label="Rank and File">Rank <em>&amp;</em> File</a>
+    <div class="tagline">Chess training for the rest of us</div>
+    <nav class="tabs caps"><a class="tab${title === 'Privacy Policy' ? ' on' : ''}" href="/privacy">Privacy</a><a class="tab${title === 'Terms of Use' ? ' on' : ''}" href="/terms">Terms</a><a class="tab" href="/">The app</a></nav>
+  </header>
   <div class="page"><article class="legal">
     <h1>${title}</h1>
     <p class="muted">Version ${POLICY_VERSION}</p>

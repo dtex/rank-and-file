@@ -1,5 +1,5 @@
 import { html, nothing } from 'lit'
-import { TAGLINE, View, api, ago, board, dot, sideName } from './lib.js'
+import { TAGLINE, View, api, ago, board, sideName, wordmark } from './lib.js'
 import './map.js'
 import './settings.js'
 import './games.js'
@@ -142,7 +142,7 @@ class CbApp extends View {
       <div class="rcard">
         ${board(node.fen, node.side === 'b')}
         <div>
-          <span class="chip ${started ? 'gold' : 'ok'}">${dot(node.side)}${started ? 'New advice mission' : 'Advice mission complete'}</span>
+          <span class="caps kicker">${started ? 'New advice mission' : 'Advice mission complete'} · as ${sideName(node.side)}</span>
           <h3>${node.name}</h3>
           ${started
             ? html`<p style="margin-top:12px">Your last ${event.of} games that reached this opening followed its advice ${event.average}% of the time.
@@ -174,13 +174,13 @@ class CbApp extends View {
       <div class="rcard">
         ${board((next ?? node).fen, (next ?? node).side === 'b')}
         <div>
-          <span class="chip ok">${node.name} complete · ${node.count} of ${node.target}</span>
+          <span class="caps kicker">${node.name} complete · ${node.count} of ${node.target}</span>
           ${next
             ? html`<div class="eyebrow" style="margin-top:16px">New opening uncovered</div>
                 <h3>${next.name}</h3>
                 <div class="mv">${next.moves}</div>
-                <p style="margin-top:12px">${next.blurb}</p>
-                <p class="muted">${dot(next.side)}${next.isActive ? 'Your new mission' : 'Mission'}: reach this position ${next.target} times as ${sideName(next.side)}. ${odds}</p>
+                <p class="stand" style="font-size:19px;margin-top:12px">${next.blurb}</p>
+                <p class="muted">${next.isActive ? 'Your new mission' : 'Mission'}: reach this position ${next.target} times as ${sideName(next.side)}. ${odds}</p>
                 <div class="row">
                   <button class="pri" @click=${() => this.dismissEvent(event)}>Back to the map</button>
                   <button @click=${() => this.dismissEvent(event, `opening-${next.id}`)}>Study it</button>
@@ -222,12 +222,16 @@ class CbApp extends View {
     if (!this.me.username) return html`<cb-welcome></cb-welcome>`
     const tab = this.route.name === 'opening' ? 'openings' : this.route.name
     return html`
-      <header class="bar">
-        <a class="brand" href="#map" title=${TAGLINE}>Rank and File</a>
-        <nav class="tabs">${TABS.map(([id, label]) => html`<a class="tab ${tab === id ? 'on' : ''}" href="#${id}">${label}</a>`)}</nav>
-        <span class="sp"></span>
-        ${this.state ? html`<span class="muted">${this.state.username} · synced ${ago(this.state.lastSync)}</span>` : nothing}
-        <button ?disabled=${this.syncing} @click=${() => this.sync()}>${this.syncing ? 'Checking…' : 'Check for new games'}</button>
+      <header class="mast">
+        <div class="dl caps">
+          <span>${new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+          <span class="sp"></span>
+          ${this.state ? html`<span>${this.state.username} · synced ${ago(this.state.lastSync)}</span>` : nothing}
+          <button class="link" ?disabled=${this.syncing} @click=${() => this.sync()}>${this.syncing ? 'Checking…' : 'Check for new games'}</button>
+        </div>
+        ${wordmark('#map')}
+        <div class="tagline">${TAGLINE}</div>
+        <nav class="tabs caps">${TABS.map(([id, label]) => html`<a class="tab ${tab === id ? 'on' : ''}" href="#${id}">${label}</a>`)}</nav>
       </header>
       ${this.notice
         ? html`<div class="notice ${this.notice.err ? 'err' : ''}" role="status"><span>${this.notice.text}</span><span class="sp"></span>

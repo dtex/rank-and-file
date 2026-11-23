@@ -10,6 +10,9 @@ export class View extends LitElement {
 /** The name and what it stands for, shown together wherever the app introduces itself. */
 export const TAGLINE = 'Chess training for the rest of us'
 
+/** The name as the masthead sets it. */
+export const wordmark = (href) => html`<a class="brand" href=${href} aria-label="Rank and File">Rank <em>&amp;</em> File</a>`
+
 export async function api(path, { method = 'GET', body } = {}) {
   const res = await fetch(path, {
     method,
@@ -46,6 +49,21 @@ export function board(fen, flip = false) {
 }
 
 export const sideName = (s) => (s === 'w' ? 'White' : 'Black')
+
+/** Progress as a row of dots, one per game the mission asks for. */
+export const pips = (n, of) => html`<span class="pips" role="img" aria-label="${n} of ${of}">${Array.from({ length: of }, (_, i) => html`<i class=${i < n ? 'on' : ''}></i>`)}</span>`
+
+/** An opening as a captioned diagram: its tile on the map and in lists. */
+export function tile(n, { fresh = false, style = '' } = {}) {
+  const word = ['parked', 'hidden', 'locked'].includes(n.status) ? n.status : ''
+  return html`<a class="node ${n.status} ${fresh ? 'fresh' : ''}" style=${style} href="#opening-${n.id}" draggable="false">
+    ${board(n.fen, n.side === 'b')}
+    <span class="mvn">${n.lastMove}</span>
+    <span class="nm">${n.name}</span>
+    <span class="pr caps">${pips(n.count, n.target)}${word}${n.adviceMission
+      ? html`<span class="flag" title="Advice mission: follow this opening's ideas more closely">!</span>` : nothing}</span>
+  </a>`
+}
 export const dot = (s) => html`<span class="dot ${s}" title="${sideName(s)}"></span>`
 
 export function ago(unix) {
@@ -66,10 +84,12 @@ export function longDay(unix) {
 }
 
 export const resultWord = { win: 'Win', loss: 'Loss', draw: 'Draw' }
+/** The same results as a sentence would put them: "Won as White". */
+export const resultVerb = { win: 'Won', loss: 'Lost', draw: 'Drew' }
 
-/** Advice accuracy as a chip: green at or above the target, red below. */
+/** Advice accuracy as a figure, coloured when it is below the target. */
 export function accuracy(score, threshold) {
-  return html`<span class="chip ${score >= threshold ? 'ok' : 'bad'}">${score}%</span>`
+  return html`<b class="acc ${score >= threshold ? 'ok' : 'bad'}">${score}%</b>`
 }
 
 const MARK = { pass: '✓', partial: '◐', fail: '✗', na: '–' }

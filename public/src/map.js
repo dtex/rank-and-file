@@ -1,12 +1,15 @@
 import { html, nothing, svg } from 'lit'
 import './plan.js'
-import { View, accuracy, api, board, dot, resultWord, sideName, verdict } from './lib.js'
+import { View, accuracy, api, board, pips, resultVerb, sideName, tile, verdict } from './lib.js'
 
-const W = 134
+const W = 150
 const H = 200
-const FOG_H = 44
-const GAP_X = 64
-const GAP_Y = 14
+const FOG_H = 34
+const GAP_X = 56
+const GAP_Y = 12
+/** The diagram inside a tile, which the connecting lines run between. */
+const BOARD = 104
+const BOARD_MID = 58
 
 /** Left-to-right tree: each parent is centred on its children. */
 function layout(state) {
@@ -81,7 +84,7 @@ class CbMap extends View {
     if (!vp || !this.state || !vp.clientWidth) return
     const { all, width, height } = layout(this.state)
     const pad = 28
-    const top = 60 // clears the zoom buttons
+    const top = 56 // clears the zoom buttons
     const vw = vp.clientWidth
     const vh = vp.clientHeight
     const k = Math.min(1, Math.max(0.7, Math.min((vw - pad * 2) / width, (vh - top - pad) / height)))
@@ -167,46 +170,31 @@ class CbMap extends View {
     const style = `left:${it.x}px;top:${it.y}px`
     if (it.fog) {
       const f = it.fog
+      const label = html`<b class=${f.side}>?</b>${sideName(f.side)} line, unexplored`
       // Only an admin's tiles carry an id: they open the study page without uncovering anything.
-      if (f.id) {
-        return html`<a class="fogn" style=${style} href="#opening-${f.id}" draggable="false"
-          title="Hidden ${sideName(f.side)} opening: view its page">${dot(f.side)}<span class="q">?</span> hidden</a>`
-      }
-      return html`<div class="fogn" style=${style}
-        title="Hidden ${sideName(f.side)} opening. Finishing a mission uncovers the one your games reach most.">
-        ${dot(f.side)}<span class="q">?</span> hidden</div>`
+      if (f.id) return html`<a class="fogn" style=${style} href="#opening-${f.id}" draggable="false" title="View this hidden opening's page">${label}</a>`
+      return html`<div class="fogn" style=${style} title="Finishing a mission uncovers the hidden opening your games reach most.">${label}</div>`
     }
     const n = it.node
-    if (n.status === 'start') {
-      return html`<div class="node start" style=${style}>${board(n.fen)}<b>${n.name}</b></div>`
-    }
-    const pct = Math.round((n.count / n.target) * 100)
-    return html`<a class="node ${n.status} ${this.fresh?.has(n.id) ? 'fresh' : ''}" style=${style} href="#opening-${n.id}" draggable="false">
-      ${board(n.fen, n.side === 'b')}
-      <b>${n.name}</b><span class="mv">${n.lastMove}</span>
-      <span class="st">${dot(n.side)}${n.status === 'done'
-        ? html`✓ ${n.count}/${n.target}`
-        : html`${n.count}/${n.target}${n.status === 'parked' ? ' parked' : html`<span class="meter"><s style="width:${pct}%"></s></span>`}`}${n.adviceMission
-        ? html`<span class="flag" title="Advice mission: follow this opening's ideas more closely">!</span>` : nothing}</span>
-    </a>`
+    if (n.status === 'start') return html`<div class="node start" style=${style}>${board(n.fen)}<span class="nm">The starting position</span></div>`
+    return tile(n, { fresh: this.fresh?.has(n.id), style })
   }
 
   renderMission(side) {
     const { active, parked } = this.state.missions[side]
     return html`
       ${active
-        ? html`<a class="mcard" href="#opening-${active.id}">
-            <span class="chip gold">${dot(side)}As ${sideName(side)}</span>
-            <h4>${active.name}</h4><span class="mv muted">${active.moves}</span>
-            <div class="pips">${Array.from({ length: active.target }, (_, i) => html`<u class=${i < active.count ? 'f' : ''}></u>`)}</div>
-            <span class="muted">${active.count} of ${active.target}${active.reach.of
-              ? html` · reached in ${active.reach.reached} of your last ${active.reach.of} ${sideName(side)} games` : nothing}</span>
+        ? html`<a class="as" href="#opening-${active.id}">
+            <span class="caps who">As ${sideName(side)}</span>
+            <h4>${active.name}</h4><span class="mv">${active.moves}</span>
+            <span class="ct"><b>${active.count}<small>/${active.target}</small></b>${pips(active.count, active.target)}</span>
+            ${active.reach.of ? html`<span class="note">Reached in ${active.reach.reached} of your last ${active.reach.of} ${sideName(side)} games.</span>` : nothing}
           </a>`
-        : html`<div class="mcard muted">${dot(side)}${this.state.plan.atLimit
+        : html`<p class="as"><span class="caps who">As ${sideName(side)}</span>${this.state.plan.atLimit
             ? `Your next ${sideName(side)} opening needs a membership.`
-            : `No ${sideName(side)} openings left to uncover from here.`}</div>`}
-      ${parked.map((p) => html`<div class="row" style="margin-top:6px">
-        <span class="muted">Parked: ${p.name} ${p.count}/${p.target}</span>
+            : `No ${sideName(side)} openings left to uncover from here.`}</p>`}
+      ${parked.map((p) => html`<div class="row" style="margin:-6px 0 14px">
+        <span class="fine">Parked: ${p.name}, ${p.count} of ${p.target}</span>
         <button class="link" ?disabled=${this.busy} @click=${() => this.switchTo({ id: p.id })}>Resume</button></div>`)}
       ${this.error && parked.length ? html`<p style="color:var(--bad)">${this.error}</p>` : nothing}`
   }
@@ -216,13 +204,12 @@ class CbMap extends View {
     const list = this.state.missions.advice
     if (!list.length) return nothing
     return html`<div>
-      <div class="eyebrow">Advice missions</div>
-      ${list.map((m) => html`<a class="mcard" href="#opening-${m.id}">
-        <span class="chip gold">${dot(m.side)}Follow the advice</span>
+      <h3>Advice missions</h3>
+      ${list.map((m) => html`<a class="as" href="#opening-${m.id}">
+        <span class="caps who">Follow the advice · as ${sideName(m.side)}</span>
         <h4>${m.name}</h4>
-        <div class="pips">${Array.from({ length: m.of }, (_, i) => html`<u class=${i < m.played ? 'f' : ''}></u>`)}</div>
-        <span class="muted">Your last ${m.of} games here averaged ${m.startAverage}%. Average ${m.threshold}% over ${m.of} new ones${m.played
-          ? html` · ${m.current}% after ${m.played}` : nothing}</span>
+        <span class="ct">${m.played ? html`<b>${m.current}<small>%</small></b>` : nothing}${pips(m.played, m.of)}</span>
+        <span class="note">Your last ${m.of} games here averaged ${m.startAverage}%. Average ${m.threshold}% over ${m.of} new ones.</span>
       </a>`)}
     </div>`
   }
@@ -241,10 +228,12 @@ class CbMap extends View {
         </div>
         <div class="canvas" style="width:${width}px;height:${height}px;transform:translate(${v.x}px,${v.y}px) scale(${v.k})">
           <svg width=${width} height=${height} aria-hidden="true">${edges.map(({ from, to }) => {
-            const x1 = from.x + W, y1 = from.y + from.h / 2, x2 = to.x, y2 = to.y + to.h / 2, m = (x1 + x2) / 2
+            // Lines run from diagram to diagram, not from the edges of the tiles.
+            const mid = (it) => it.y + (it.node && it.node.status !== 'start' ? BOARD_MID : it.h / 2 - (it.node ? 12 : 0))
+            const x1 = from.x + (W + BOARD) / 2 + 10, y1 = mid(from), x2 = to.x + (to.fog ? 4 : (W - BOARD) / 2 - 10), y2 = mid(to), m = (x1 + x2) / 2
             return svg`<path d="M${x1} ${y1} C${m} ${y1} ${m} ${y2} ${x2} ${y2}" fill="none"
-              stroke=${to.fog ? 'var(--muted)' : 'var(--ink)'} stroke-width="1.5"
-              stroke-dasharray=${to.fog ? '3 4' : nothing} opacity=${to.fog ? 0.6 : 1} />`
+              stroke=${to.fog ? 'var(--muted)' : 'var(--ink)'} stroke-width="1"
+              stroke-dasharray=${to.fog ? '1 4' : nothing} stroke-linecap="round" />`
           })}</svg>
           ${all.map((it) => this.renderNode(it))}
         </div>
@@ -252,21 +241,22 @@ class CbMap extends View {
       <aside class="sidebar">
         ${s.plan.subscribed ? nothing : html`<cb-plan .plan=${s.plan}></cb-plan>`}
         <div>
-          <div class="eyebrow">Active missions</div>
+          <h3>Active missions</h3>
           ${this.renderMission('w')}${this.renderMission('b')}
         </div>
         ${this.renderAdvice()}
         <div>
-          <div class="eyebrow">Latest games</div>
+          <h3>Latest results</h3>
           ${s.latest.length
-            ? html`<div class="mini">${s.latest.map((g) => html`<div>
-                <span>${dot(g.side)}${resultWord[g.result]} · ${g.opening?.hidden ? html`<span class="hid">undiscovered</span>` : g.opening?.name ?? 'off the map'}</span>
-                <span class="row">${g.advice?.score != null ? accuracy(g.advice.score, s.adviceThreshold) : nothing}${verdict(g.verdict, { short: true })}</span></div>`)}</div>
-              <p style="margin-top:8px"><a href="#games">All games</a></p>`
-            : html`<p class="muted" style="margin-top:6px">Nothing yet. Games you finish from now on show up here after a sync.</p>`}
+            ? html`${s.latest.map((g) => html`<div class="res">
+                <b>${resultVerb[g.result]}</b> as ${sideName(g.side)}, ${g.opening?.hidden ? html`<span class="hid">in a line not yet uncovered</span>`
+                  : g.opening ? g.opening.name : 'off the map'}.
+                <span>${verdict(g.verdict, { short: true })}${g.advice?.score != null ? html` · advice ${accuracy(g.advice.score, s.adviceThreshold)}` : nothing}</span></div>`)}
+              <p style="margin-top:12px"><a class="caps" href="#games">All games</a></p>`
+            : html`<p class="fine">Nothing yet. Games you finish from now on show up here after a sync.</p>`}
         </div>
-        <div class="muted">${s.totals.uncovered} of ${s.totals.openings} openings uncovered · ${s.totals.done} complete</div>
-        <div class="muted"><a href="/privacy" target="_blank" rel="noopener">Privacy</a> · <a href="/terms" target="_blank" rel="noopener">Terms</a></div>
+        <div class="fine">${s.totals.uncovered} of ${s.totals.openings} openings uncovered, ${s.totals.done} complete.<br>
+          <a href="/privacy" target="_blank" rel="noopener">Privacy</a> · <a href="/terms" target="_blank" rel="noopener">Terms</a></div>
       </aside>`
   }
 }
