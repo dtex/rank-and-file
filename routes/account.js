@@ -1,6 +1,7 @@
 // The signed-in user's own account: consent, email, data export and deletion.
 import { CONSENT_TEXT, LINK_MINUTES, POLICY_VERSION, isEmail, normalizeEmail } from '../services/accounts.js'
 import { linkEmail } from '../services/mailer.js'
+import { describeAccounts, usernamesOf } from '../services/sites.js'
 import { planView } from '../services/views.js'
 import { SESSION_COOKIE } from './auth.js'
 
@@ -12,13 +13,16 @@ export default async function accountRoutes(app) {
     const progress = await req.cb.store.loadProgress()
     return {
       email: u.email,
-      username: progress.settings.username || null,
+      // Null until the user has named an account on at least one site.
+      username: describeAccounts(progress.settings) || null,
+      usernames: usernamesOf(progress.settings),
       needsConsent: !u.accepted_terms_at,
       marketing: u.marketing_opt_in,
       methods: await accounts.methods(u.id),
       policyVersion: POLICY_VERSION,
       consentText: CONSENT_TEXT,
       plan: planView(req.cb.plan),
+      admin: req.cb.admin,
     }
   })
 

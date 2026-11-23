@@ -36,9 +36,9 @@ test('an emailed link signs in, then consent and a username are needed before th
   assert.equal((await c.put('/api/settings', { username: 'somebody', timeClasses: ['blitz'], ratedOnly: true })).statusCode, 200)
   const state = await c.get('/api/state')
   assert.equal(state.statusCode, 200)
-  assert.equal(state.json().username, 'somebody')
+  assert.equal(state.json().accounts, 'somebody on chess.com')
   me = (await c.get('/api/me')).json()
-  assert.deepEqual([me.needsConsent, me.username, me.marketing], [false, 'somebody', false])
+  assert.deepEqual([me.needsConsent, me.username, me.marketing], [false, 'somebody on chess.com', false])
 
   await c.post('/auth/logout')
   assert.equal((await c.get('/api/me')).statusCode, 401)
@@ -102,7 +102,7 @@ test('Google and GitHub sign in by verified email, and the same email is the sam
   assert.equal(to.searchParams.get('scope'), 'openid email')
   assert.equal(to.searchParams.get('redirect_uri'), 'http://localhost:3210/auth/google/callback')
   assert.equal(to.searchParams.get('code_challenge_method'), 'S256')
-  assert.deepEqual([back.statusCode, back.headers.location], [302, '/'])
+  assert.deepEqual([back.statusCode, back.headers.location], [302, '/app'])
   const sent = new URLSearchParams(providers.seen.find((s) => s.url.endsWith('/token')).opts.body)
   assert.ok(sent.get('code_verifier'), 'the PKCE verifier goes with the code')
   assert.equal((await g.get('/api/me')).json().email, email)
@@ -110,7 +110,7 @@ test('Google and GitHub sign in by verified email, and the same email is the sam
   const h = client(ctx.app)
   const gh = await oauth(h, 'github', 'hcode')
   assert.equal(gh.to.searchParams.get('scope'), 'user:email')
-  assert.equal(gh.back.headers.location, '/')
+  assert.equal(gh.back.headers.location, '/app')
 
   const m = await signIn(ctx, email, { ready: false })
   const me = (await m.get('/api/me')).json()
@@ -126,16 +126,16 @@ test('sign-in is refused without a verified email, a matching state, or a good c
   for (const [provider, code] of [['google', 'gcode'], ['github', 'hcode']]) {
     const c = client(ctx.app)
     const { back } = await oauth(c, provider, code)
-    assert.equal(back.headers.location, '/#login-error=no-email', provider)
+    assert.equal(back.headers.location, '/app#login-error=no-email', provider)
     assert.equal((await c.get('/api/me')).statusCode, 401)
   }
   assert.equal((await ctx.pool.query('select 1 from users where email = $1', [email])).rowCount, 0, 'no account is created')
 
   const c = client(ctx.app)
   await c.get('/auth/google/start')
-  assert.equal((await c.get('/auth/google/callback?code=gcode&state=forged')).headers.location, '/#login-error=expired')
-  assert.equal((await oauth(client(ctx.app), 'google', 'wrong')).back.headers.location, '/#login-error=provider')
-  assert.equal((await client(ctx.app).get('/auth/google/callback?code=gcode&state=x')).headers.location, '/#login-error=expired', 'no attempt cookie')
+  assert.equal((await c.get('/auth/google/callback?code=gcode&state=forged')).headers.location, '/app#login-error=expired')
+  assert.equal((await oauth(client(ctx.app), 'google', 'wrong')).back.headers.location, '/app#login-error=provider')
+  assert.equal((await client(ctx.app).get('/auth/google/callback?code=gcode&state=x')).headers.location, '/app#login-error=expired', 'no attempt cookie')
 })
 
 test('only configured providers are offered', async () => {
@@ -144,12 +144,22 @@ test('only configured providers are offered', async () => {
   assert.equal((await app.inject({ url: '/auth/github/start' })).statusCode, 404)
 })
 
+/** Give a user a parked 1.d4 mission to resume, as a lapsed membership can leave behind. */
+async function parkQp(ctx, c) {
+  await c.get('/api/state')
+  const store = ctx.app.ctx.store.forUser(c.userId)
+  const p = await store.loadProgress()
+  p.missions.qp = { status: 'parked', side: 'w', startedAt: p.createdAt, since: p.createdAt, games: [] }
+  await store.saveProgress(p)
+}
+
 test('each user sees only their own progress', async () => {
   const ctx = await testApp()
   const a = await signIn(ctx, uniqueEmail('a'), { username: 'alice' })
   const b = await signIn(ctx, uniqueEmail('b'), { username: 'bob' })
-  assert.equal((await a.get('/api/state')).json().username, 'alice')
-  assert.equal((await b.get('/api/state')).json().username, 'bob')
+  assert.equal((await a.get('/api/state')).json().accounts, 'alice on chess.com')
+  assert.equal((await b.get('/api/state')).json().accounts, 'bob on chess.com')
+  await parkQp(ctx, a)
   assert.equal((await a.post('/api/missions/switch', { id: 'qp' })).statusCode, 200)
   assert.equal((await a.get('/api/state')).json().missions.w.active.id, 'qp')
   assert.equal((await b.get('/api/state')).json().missions.w.active.id, 'kp')
@@ -158,6 +168,7 @@ test('each user sees only their own progress', async () => {
 test('requests that change something are refused from another site', async () => {
   const ctx = await testApp()
   const c = await signIn(ctx)
+  await parkQp(ctx, c)
   const evil = await c.request('POST', '/api/missions/switch', { id: 'qp' }, { origin: 'https://evil.example' })
   assert.equal(evil.statusCode, 403)
   const own = await c.request('POST', '/api/missions/switch', { id: 'qp' }, { origin: 'http://localhost:3210' })

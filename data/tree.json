@@ -8,8 +8,8 @@
 
   { "id": "open", "parent": "kp", "name": "Open Game", "side": "b", "moves": "e4 e5", "eco": "C20",
     "blurb": "Black mirrors White and claims an equal share of the centre. Most classical openings start here.",
-    "ideas": ["Your e5 pawn will be attacked by Nf3; be ready to defend it with ...Nc6.", "Develop the king's knight and bishop, then castle.", "Don't bring the queen out early."],
-    "checks": [{ "when": "Nf3", "next": true, "play": "Nc6" }, { "setup": ["Nf6|Ne7", "Bc5|Be7|Bb4|Bd6", "O-O"], "by": 10 }, { "avoid": "Q*", "by": 6 }] },
+    "ideas": ["Your e5 pawn will be attacked by Nf3. Be ready to defend it with ...Nc6 or ...d6, or to hit back at e4 with ...Nf6.", "Develop the king's knight and bishop, then castle.", "Don't bring the queen out early."],
+    "checks": [{ "when": "Nf3", "next": true, "play": "Nc6|Nf6|d6" }, { "setup": ["Nf6|Ne7", "Bc5|Be7|Bb4|Bd6", "O-O"], "by": 10 }, { "avoid": "Q*", "by": 6 }] },
 
   { "id": "knight", "parent": "open", "name": "King's Knight Opening", "side": "w", "moves": "e4 e5 Nf3", "eco": "C40",
     "blurb": "White develops a piece and attacks the e5 pawn at once. It is the main road into the Italian, the Ruy Lopez and the Scotch.",

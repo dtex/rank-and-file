@@ -1,10 +1,11 @@
 // Postgres storage. Everything a user's missions depend on is reached through
 // a store bound to that user, so one user's request can never touch another's rows.
 import { withTx } from './db.js'
+import { usernamesOf } from './sites.js'
 
 export const DEFAULT_SETTINGS = {
-  // The chess.com account to follow. Empty until the user has told us.
-  username: '',
+  // The accounts to follow, one per site. Both empty until the user has told us; one is enough.
+  usernames: { chesscom: '', lichess: '' },
   timeClasses: ['blitz', 'rapid', 'daily'],
   ratedOnly: true,
   adviceThreshold: 70,
@@ -22,6 +23,28 @@ export function newProgress(now = Math.floor(Date.now() / 1000)) {
   }
 }
 
+/** Progress saved before Lichess was supported has a single `username`, which was the chess.com one. */
+function upToDate(progress) {
+  const { username, ...settings } = progress.settings ?? {}
+  progress.settings = { ...settings, usernames: usernamesOf(progress.settings) }
+  return progress
+}
+
+/** Insert games that are not stored yet, inside a transaction. Returns the ones that were new. */
+async function insertGames(db, userId, games) {
+  const added = []
+  for (const g of games) {
+    const { verdict = null, ...data } = g
+    const res = await db.query(
+      `insert into games (user_id, uuid, ended_at, data, verdict) values ($1, $2, $3, $4, $5)
+       on conflict (user_id, uuid) do nothing`,
+      [userId, g.uuid, g.end, JSON.stringify(data), verdict && JSON.stringify(verdict)],
+    )
+    if (res.rowCount) added.push(g)
+  }
+  return added
+}
+
 const toGame = (row) => (row.verdict ? { ...row.data, verdict: row.verdict } : row.data)
 
 export function createStore(pool) {
@@ -33,7 +56,7 @@ export function createStore(pool) {
         userId,
         async loadProgress() {
           const { rows } = await pool.query('select data from progress where user_id = $1', [userId])
-          return rows[0]?.data ?? newProgress()
+          return rows[0] ? upToDate(rows[0].data) : newProgress()
         },
         async saveProgress(p) {
           await pool.query(
@@ -42,7 +65,7 @@ export function createStore(pool) {
             [userId, JSON.stringify(p)],
           )
         },
-        /** Months already fetched from chess.com, as { '2026-11': etag | null }. */
+        /** chess.com months already fetched, as { '2026-11': etag | null }. */
         async loadMonths() {
           const { rows } = await pool.query('select month, etag from archive_months where user_id = $1', [userId])
           return Object.fromEntries(rows.map((r) => [r.month, r.etag]))
@@ -50,16 +73,7 @@ export function createStore(pool) {
         /** Record a fetched month. Returns the games that were not stored before. */
         async saveMonth(month, games, etag = null) {
           return withTx(pool, async (db) => {
-            const added = []
-            for (const g of games) {
-              const { verdict = null, ...data } = g
-              const res = await db.query(
-                `insert into games (user_id, uuid, ended_at, data, verdict) values ($1, $2, $3, $4, $5)
-                 on conflict (user_id, uuid) do nothing`,
-                [userId, g.uuid, g.end, JSON.stringify(data), verdict && JSON.stringify(verdict)],
-              )
-              if (res.rowCount) added.push(g)
-            }
+            const added = await insertGames(db, userId, games)
             await db.query(
               `insert into archive_months (user_id, month, etag) values ($1, $2, $3)
                on conflict (user_id, month) do update set etag = coalesce(excluded.etag, archive_months.etag)`,
@@ -67,6 +81,19 @@ export function createStore(pool) {
             )
             return added
           })
+        },
+        /** Store games from a site that is not fetched by month. Returns the ones that were not stored before. */
+        async saveGames(games) {
+          if (!games.length) return []
+          return withTx(pool, (db) => insertGames(db, userId, games))
+        },
+        /** When the newest stored game from `site` started, in unix seconds, or null with none stored. */
+        async latestStart(site) {
+          const { rows } = await pool.query(
+            `select max((data->>'start')::bigint) as start from games where user_id = $1 and data->>'site' = $2`,
+            [userId, site],
+          )
+          return rows[0].start === null ? null : Number(rows[0].start)
         },
         /** Every stored game, oldest first. */
         async loadAllGames() {
@@ -82,7 +109,7 @@ export function createStore(pool) {
             }
           })
         },
-        /** Delete every stored game and all progress. Used when the username changes. */
+        /** Delete every stored game and all progress. Used when a username changes. */
         async reset() {
           await withTx(pool, async (db) => {
             await db.query('delete from games where user_id = $1', [userId])

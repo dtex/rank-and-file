@@ -12,7 +12,7 @@ test('a new user starts with empty progress, and saved progress comes back', asy
   const { store } = await testStore()
   const p = await store.loadProgress()
   assert.deepEqual(p.missions, {})
-  p.settings.username = 'me'
+  p.settings.usernames.chesscom = 'me'
   p.missions.kp = { status: 'active', side: 'w', startedAt: 1, games: [] }
   await store.saveProgress(p)
   assert.deepEqual(await store.loadProgress(), p)
@@ -42,14 +42,14 @@ test('one user never sees or resets another user\'s data', async () => {
   await a.store.saveMonth('2026-10', [game('shared', 100)], 'ea')
   await b.store.saveMonth('2026-10', [game('shared', 100)], 'eb')
   const pa = await a.store.loadProgress()
-  pa.settings.username = 'alice'
+  pa.settings.usernames.chesscom = 'alice'
   await a.store.saveProgress(pa)
 
   await b.store.reset()
   assert.equal((await b.store.loadAllGames()).length, 0)
   assert.deepEqual(await b.store.loadMonths(), {})
   assert.equal((await a.store.loadAllGames()).length, 1)
-  assert.equal((await a.store.loadProgress()).settings.username, 'alice')
+  assert.equal((await a.store.loadProgress()).settings.usernames.chesscom, 'alice')
 })
 
 test('withLock runs work for one key in order and survives a failure', async () => {

@@ -5,6 +5,7 @@ import { applyEntitlement, fillSlots, processGames } from './missions.js'
 import { FULL_PLAN } from './entitlement.js'
 import { updateAdviceMissions } from './advice.js'
 import { withLock } from './store.js'
+import { SITE_NAMES, hasUsername } from './sites.js'
 
 let tree = null
 export function getTree() {
@@ -22,20 +23,21 @@ export const locked = (store, fn) => withLock(store.userId, fn)
  */
 export async function loadState({ store, plan = FULL_PLAN }) {
   const progress = await store.loadProgress()
-  if (!progress.settings.username) {
-    throw Object.assign(new Error('Add your chess.com username first.'), { statusCode: 409, needsUsername: true })
+  if (!hasUsername(progress.settings)) {
+    throw Object.assign(new Error(`Add your username on ${SITE_NAMES.replace(' and ', ' or ')} first.`), { statusCode: 409, needsUsername: true })
   }
   const relocked = applyEntitlement(getTree(), progress, plan.subscribed, now())
-  const started = fillSlots(getTree(), progress, now(), plan.limit)
+  const games = await store.loadAllGames()
+  const started = fillSlots(getTree(), progress, now(), plan.limit, games)
   if (relocked || started.length) await store.saveProgress(progress)
-  return { tree: getTree(), progress, games: await store.loadAllGames() }
+  return { tree: getTree(), progress, games }
 }
 
 export async function runSync({ store, fetchImpl, plan = FULL_PLAN }) {
   // Missions must exist before new games are judged.
   const { progress: before } = await locked(store, () => loadState({ store, plan }))
-  // The slow part, talking to chess.com, runs without holding the lock.
-  const added = await pullGames({ store, username: before.settings.username, fetchImpl })
+  // The slow part, talking to the chess sites, runs without holding the lock.
+  const { added, problem } = await pullGames({ store, settings: before.settings, fetchImpl })
 
   return locked(store, async () => {
     // Read again: a mission may have been switched while the games were downloading.
@@ -48,6 +50,8 @@ export async function runSync({ store, fetchImpl, plan = FULL_PLAN }) {
     await store.saveProgress(progress)
     return {
       added: added.length,
+      // One site could not be reached; the other's games are in.
+      problem,
       counted: judged.filter((g) => g.verdict.type === 'counted').length,
       completed: events.length,
       adviceStarted: advice.filter((e) => e.type === 'advice_started').length,

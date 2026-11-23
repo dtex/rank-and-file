@@ -1,16 +1,14 @@
 // Shapes data for the browser. Nothing about a hidden opening leaves the server
-// except that it exists, which colour owns it, and what it hangs off.
+// except that it exists, which colour owns it, and what it hangs off. Admins are
+// the exception: with `admin` set, the views show hidden openings in full.
 import { createHash } from 'node:crypto'
 import { FREE_OPENINGS, candidates, isUncovered, uncoveredCount } from './missions.js'
 import { ADVICE_WINDOW, adviceHistory, adviceThreshold, average, gameAdvice, missionRows } from './advice.js'
+import { describeAccounts, gameSite } from './sites.js'
 import { deepestNode, deviation, formatMove, ineligibleReason, reached, userResult, userSide } from './matcher.js'
 
 /** Opaque id for a fog tile, so the real id (which names the opening) is not exposed. */
 export const fogId = (id) => createHash('sha1').update(`fog:${id}`).digest('hex').slice(0, 10)
-
-export function resolveFogId(tree, progress, fid) {
-  return candidates(tree, progress).find((n) => fogId(n.id) === fid) ?? null
-}
 
 function movesText(node) {
   return node.plies.map((san, i) => (i % 2 === 0 ? `${i / 2 + 1}.${san}` : san)).join(' ')
@@ -36,7 +34,7 @@ function nodeView(node, progress) {
 
 /** Games where the user had this opening's colour and the game was eligible, oldest first. */
 function sideGames(node, games, settings) {
-  return games.filter((g) => userSide(g, settings.username) === node.side && !ineligibleReason(g, settings))
+  return games.filter((g) => userSide(g, settings) === node.side && !ineligibleReason(g, settings))
 }
 
 /** How often recent games of the right colour got to this opening. */
@@ -80,7 +78,7 @@ function adviceMissionView(node, progress, history) {
 }
 
 function gameView(game, tree, progress, adviceFor = null) {
-  const side = userSide(game, progress.settings.username)
+  const side = userSide(game, progress.settings)
   const opp = side === 'w' ? game.black : game.white
   const deepest = game.moves.length ? deepestNode(tree, game) : null
   const v = game.verdict ?? { type: 'pending' }
@@ -91,6 +89,7 @@ function gameView(game, tree, progress, adviceFor = null) {
     side,
     opponent: opp.name,
     opponentRating: opp.rating,
+    site: gameSite(game),
     timeClass: game.timeClass,
     timeControl: formatTimeControl(game),
     result: side ? userResult(game, side) : null,
@@ -128,10 +127,11 @@ export function planView(plan, progress = null) {
   return out
 }
 
-export function stateView(tree, progress, games, plan = { subscribed: true, source: null, until: null, limit: Infinity }) {
+export function stateView(tree, progress, games, plan = { subscribed: true, source: null, until: null, limit: Infinity }, admin = false) {
   const nodes = [nodeView(tree.root, progress)]
   for (const n of tree.nodes) if (isUncovered(progress, n.id)) nodes.push(nodeView(n, progress))
-  const fog = candidates(tree, progress).map((n) => ({ fid: fogId(n.id), parent: n.parent, side: n.side }))
+  // An admin's tiles carry the real id, so they can link to the opening's page.
+  const fog = candidates(tree, progress).map((n) => ({ fid: fogId(n.id), parent: n.parent, side: n.side, ...(admin ? { id: n.id } : {}) }))
 
   const missions = {}
   for (const side of ['w', 'b']) {
@@ -177,7 +177,7 @@ export function stateView(tree, progress, games, plan = { subscribed: true, sour
 
   const recent = games.filter((g) => g.verdict && g.verdict.type !== 'history').slice(-5).reverse()
   return {
-    username: progress.settings.username,
+    accounts: describeAccounts(progress.settings),
     adviceThreshold: adviceThreshold(progress.settings),
     lastSync: progress.lastSync,
     plan: planView(plan, progress),
@@ -199,9 +199,15 @@ export function openingsView(tree, progress) {
   return { openings: tree.nodes.filter((n) => isUncovered(progress, n.id)).map((n) => nodeView(n, progress)) }
 }
 
-export function openingView(tree, progress, games, id) {
+/**
+ * An opening's study page. For an admin it also opens for a hidden opening,
+ * without uncovering it, and lists the hidden openings beyond it.
+ */
+export function openingView(tree, progress, games, id, admin = false) {
   const node = tree.byId.get(id)
-  if (!node || !isUncovered(progress, id)) return null
+  if (!node || node === tree.root || (!isUncovered(progress, id) && !admin)) return null
+  const hidden = !isUncovered(progress, id)
+  const peek = (n) => (isUncovered(progress, n.id) ? nodeView(n, progress) : { ...nodeView(n, progress), status: progress.missions[n.id] ? 'locked' : 'hidden' })
   const { settings } = progress
   const pool = sideGames(node, games, settings)
   const hit = pool.filter((g) => reached(node, g))
@@ -229,7 +235,7 @@ export function openingView(tree, progress, games, id) {
   const history = adviceHistory(tree, progress, games, node)
 
   return {
-    ...nodeView(node, progress),
+    ...peek(node),
     blurb: node.blurb ?? '',
     ideas: ideaStats(node, history),
     advice: {
@@ -249,9 +255,9 @@ export function openingView(tree, progress, games, id) {
       elsewhere: [...elsewhere.values()].sort((a, b) => b.count - a.count).slice(0, 7),
       missed: pool.length - hit.length,
     },
-    missionGames: mission.games.map((u) => byUuid.get(u)).filter(Boolean).reverse().map((g) => gameView(g, tree, progress)),
-    children: node.children.filter((c) => isUncovered(progress, c.id)).map((c) => nodeView(c, progress)),
-    hiddenChildren: node.children.filter((c) => !isUncovered(progress, c.id)).length,
+    missionGames: (hidden ? [] : mission.games).map((u) => byUuid.get(u)).filter(Boolean).reverse().map((g) => gameView(g, tree, progress)),
+    children: node.children.filter((c) => admin || isUncovered(progress, c.id)).map(peek),
+    hiddenChildren: admin ? 0 : node.children.filter((c) => !isUncovered(progress, c.id)).length,
     links: {
       chesscom: `https://www.chess.com/analysis?fen=${fenParam}`,
       lichess: `https://lichess.org/analysis/standard/${node.fen.replace(/ /g, '_')}#explorer`,

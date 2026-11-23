@@ -1,5 +1,5 @@
 import { html, nothing } from 'lit'
-import { View, accuracy, adviceDetail, api, day, dot, resultWord, sideName, verdict } from './lib.js'
+import { View, accuracy, adviceDetail, api, day, resultWord, sideName, siteName, verdict } from './lib.js'
 
 const FILTERS = [
   ['all', 'All', () => true],
@@ -59,7 +59,7 @@ class CbGames extends View {
     return html`<div class="page">
       <div>
         <h2>Games</h2>
-        <p class="muted">${total > games.length ? `The latest ${games.length} of ${total} synced games.` : `${total} synced games.`}
+        <p class="stand">${total > games.length ? `The latest ${games.length} of ${total} synced games.` : `${total} synced games.`}
           Each one is judged once against the mission for the colour you played. Advice is how closely you followed
           the ideas of the openings you have uncovered; select a score to see why.</p>
         <div class="filters">${FILTERS.map(([id, label, test]) => {
@@ -72,9 +72,9 @@ class CbGames extends View {
             <tr><th>Date</th><th>Side</th><th>Opponent</th><th>Type</th><th>Result</th><th>Opening reached</th><th>Advice</th><th>Verdict</th></tr>
             ${rows.map((g) => html`<tr>
               <td class="nw"><a href=${g.url} target="_blank" rel="noopener">${day(g.end)}</a></td>
-              <td class="nw">${g.side ? html`${dot(g.side)}${sideName(g.side)}` : nothing}</td>
+              <td class="nw">${g.side ? sideName(g.side) : nothing}</td>
               <td class="nw">${g.opponent} <span class="muted">(${g.opponentRating})</span></td>
-              <td class="nw"><span style="text-transform:capitalize">${g.timeClass}</span> <span class="muted">${g.timeControl}</span></td>
+              <td class="nw"><span style="text-transform:capitalize">${g.timeClass}</span> <span class="muted">${g.timeControl} · ${siteName(g.site)}</span></td>
               <td>${resultWord[g.result] ?? ''}</td>
               <td>${!g.opening ? html`<span class="muted">Off the map</span>`
                 : g.opening.hidden ? html`<span class="hid">Undiscovered opening</span>`

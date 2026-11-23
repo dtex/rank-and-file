@@ -1,5 +1,5 @@
 import { html, nothing } from 'lit'
-import { TAGLINE, View, api, ago, board, dot, sideName } from './lib.js'
+import { APP_PATH, TAGLINE, View, api, ago, board, sideName, wordmark } from './lib.js'
 import './map.js'
 import './settings.js'
 import './games.js'
@@ -39,7 +39,7 @@ class CbApp extends View {
     // An emailed link arrives as #magic=<token>. Take it out of the address bar straight away.
     const magic = location.hash.match(/^#magic=([\w-]+)$/)
     const loginError = location.hash.match(/^#login-error=([\w-]+)$/)
-    if (magic || loginError) history.replaceState(null, '', '/')
+    if (magic || loginError) history.replaceState(null, '', APP_PATH)
     this.magic = magic?.[1] ?? null
     this.loginError = loginError?.[1] ?? null
 
@@ -60,7 +60,7 @@ class CbApp extends View {
   async afterCheckout() {
     const q = new URLSearchParams(location.search)
     if (q.get('billing') !== 'success') return
-    history.replaceState(null, '', `/${location.hash}`)
+    history.replaceState(null, '', `${APP_PATH}${location.hash}`)
     if (!this.me) return
     try {
       await api('/api/billing/confirm', { method: 'POST', body: { sessionId: q.get('session_id') } })
@@ -72,7 +72,7 @@ class CbApp extends View {
     }
   }
 
-  /** Signed in, consented and with a chess.com username: the app itself can load. */
+  /** Signed in, consented and with an account to follow: the app itself can load. */
   get ready() {
     return !!this.me && !this.me.needsConsent && !!this.me.username
   }
@@ -113,7 +113,9 @@ class CbApp extends View {
       const r = await api('/api/sync', { method: 'POST' })
       const state = await api('/api/state')
       this.setState(state, this.state ? state.nodes.filter((n) => !before.has(n.id)).map((n) => n.id) : [])
-      if (r.added) {
+      if (r.problem) {
+        this.notice = { err: true, text: `${r.added ? `${r.added} new game${r.added === 1 ? '' : 's'}, but one site could not be read. ` : ''}${r.problem}` }
+      } else if (r.added) {
         this.notice = { text: `${r.added} new game${r.added === 1 ? '' : 's'}, ${r.counted} counted toward a mission.` }
       } else if (!quiet) {
         this.notice = { text: 'No new games since the last sync.' }
@@ -142,7 +144,7 @@ class CbApp extends View {
       <div class="rcard">
         ${board(node.fen, node.side === 'b')}
         <div>
-          <span class="chip ${started ? 'gold' : 'ok'}">${dot(node.side)}${started ? 'New advice mission' : 'Advice mission complete'}</span>
+          <span class="caps kicker">${started ? 'New advice mission' : 'Advice mission complete'} · as ${sideName(node.side)}</span>
           <h3>${node.name}</h3>
           ${started
             ? html`<p style="margin-top:12px">Your last ${event.of} games that reached this opening followed its advice ${event.average}% of the time.
@@ -174,18 +176,18 @@ class CbApp extends View {
       <div class="rcard">
         ${board((next ?? node).fen, (next ?? node).side === 'b')}
         <div>
-          <span class="chip ok">${node.name} complete · ${node.count} of ${node.target}</span>
+          <span class="caps kicker">${node.name} complete · ${node.count} of ${node.target}</span>
           ${next
             ? html`<div class="eyebrow" style="margin-top:16px">New opening uncovered</div>
                 <h3>${next.name}</h3>
                 <div class="mv">${next.moves}</div>
-                <p style="margin-top:12px">${next.blurb}</p>
-                <p class="muted">${dot(next.side)}${next.isActive ? 'Your new mission' : 'Mission'}: reach this position ${next.target} times as ${sideName(next.side)}. ${odds}</p>
+                <p class="stand" style="font-size:19px;margin-top:12px">${next.blurb}</p>
+                <p class="muted">${next.isActive ? 'Your new mission' : 'Mission'}: reach this position ${next.target} times as ${sideName(next.side)}. ${odds}</p>
                 <div class="row">
                   <button class="pri" @click=${() => this.dismissEvent(event)}>Back to the map</button>
                   <button @click=${() => this.dismissEvent(event, `opening-${next.id}`)}>Study it</button>
                 </div>
-                <p class="muted" style="margin-top:12px">Prefer another branch? Pick any hidden ${sideName(next.side)} tile on the map. ${next.name} is then parked and keeps its count.</p>`
+                <p class="muted" style="margin-top:12px">It was chosen because, of the hidden ${sideName(next.side)} openings next to your map, it is the one your recent games reach most.</p>`
             : event.paywall
               ? html`<h3 style="margin-top:16px">That was your last free opening</h3>
                 <p>You have uncovered all ${this.state.plan.freeOpenings} free openings, and they stay yours to play. A membership uncovers the rest of the map.</p>
@@ -222,12 +224,16 @@ class CbApp extends View {
     if (!this.me.username) return html`<cb-welcome></cb-welcome>`
     const tab = this.route.name === 'opening' ? 'openings' : this.route.name
     return html`
-      <header class="bar">
-        <a class="brand" href="#map" title=${TAGLINE}>Rank and File</a>
-        <nav class="tabs">${TABS.map(([id, label]) => html`<a class="tab ${tab === id ? 'on' : ''}" href="#${id}">${label}</a>`)}</nav>
-        <span class="sp"></span>
-        ${this.state ? html`<span class="muted">${this.state.username} · synced ${ago(this.state.lastSync)}</span>` : nothing}
-        <button ?disabled=${this.syncing} @click=${() => this.sync()}>${this.syncing ? 'Checking…' : 'Check for new games'}</button>
+      <header class="mast">
+        <div class="dl caps">
+          <span>${new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+          <span class="sp"></span>
+          ${this.state ? html`<span>${this.state.accounts} · synced ${ago(this.state.lastSync)}</span>` : nothing}
+          <button class="link" ?disabled=${this.syncing} @click=${() => this.sync()}>${this.syncing ? 'Checking…' : 'Check for new games'}</button>
+        </div>
+        ${wordmark('#map')}
+        <div class="tagline">${TAGLINE}</div>
+        <nav class="tabs caps">${TABS.map(([id, label]) => html`<a class="tab ${tab === id ? 'on' : ''}" href="#${id}">${label}</a>`)}</nav>
       </header>
       ${this.notice
         ? html`<div class="notice ${this.notice.err ? 'err' : ''}" role="status"><span>${this.notice.text}</span><span class="sp"></span>

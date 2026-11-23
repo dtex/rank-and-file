@@ -1,5 +1,7 @@
 // Membership payments through Stripe: checkout, the customer portal, and
 // keeping each user's subscription state in step with Stripe's.
+import { APP_PATH } from './site.js'
+
 const DAY = 86400
 
 /** Stripe statuses that count as a membership. past_due keeps access while Stripe retries the card. */
@@ -68,8 +70,8 @@ export function createBilling({ pool, config, stripe }) {
         client_reference_id: user.id,
         ...(user.stripe_customer_id ? { customer: user.stripe_customer_id } : { customer_email: user.email }),
         subscription_data: subscription,
-        success_url: `${config.baseUrl}/?billing=success&session_id={CHECKOUT_SESSION_ID}#settings`,
-        cancel_url: `${config.baseUrl}/#settings`,
+        success_url: `${config.baseUrl}${APP_PATH}?billing=success&session_id={CHECKOUT_SESSION_ID}#settings`,
+        cancel_url: `${config.baseUrl}${APP_PATH}#settings`,
       })
       return session.url
     },
@@ -87,7 +89,7 @@ export function createBilling({ pool, config, stripe }) {
     async portal(user) {
       need()
       if (!user.stripe_customer_id) throw fail(409, 'There is no membership to manage yet.')
-      const session = await stripe.billingPortal.sessions.create({ customer: user.stripe_customer_id, return_url: `${config.baseUrl}/#settings` })
+      const session = await stripe.billingPortal.sessions.create({ customer: user.stripe_customer_id, return_url: `${config.baseUrl}${APP_PATH}#settings` })
       return session.url
     },
 

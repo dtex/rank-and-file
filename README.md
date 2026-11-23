@@ -1,12 +1,39 @@
 # Rank and File
 
-Chess training for the rest of us. Opening missions tracked against your chess.com games, for any number of players.
+Chess training for the rest of us. Opening missions tracked against your chess.com and Lichess games, for any number of players.
+
+## The site and the app
+
+The marketing site has the root: `/`, `/features` and `/pricing`, written in `routes/site.js` and
+sharing a shell with `/privacy` and `/terms` (`services/site.js`). They are plain HTML from the
+server, each with its questions and answers both on the page and as FAQPage data, plus
+`/robots.txt` and `/sitemap.xml`. The figures they quote are read from the code and `data/tree.json`.
+
+The app itself is one page at `/app`. Sign-in, emailed links and Stripe all return there.
 
 ## Opening missions
 
-You get a mission for one opening per colour, play your normal chess.com games, and the app
-counts the ones that actually reached that opening. Finish a mission and the next opening on
-the map comes out of the fog.
+You get a mission for one opening per colour, play your normal games on chess.com or Lichess, and the app
+counts the ones that actually reached that opening. Finish a mission and the next opening
+comes out of the fog: of the hidden ones next to what you have uncovered, the one your last
+1,000 games reached most often with that colour. With nothing to go on it follows the map's
+main lines. Nobody picks the next opening themselves.
+
+## chess.com and Lichess
+
+A user gives a username on chess.com, on Lichess, or on both, and games from both feed the same
+missions. Each site has a small client (`services/chesscom.js`, `services/lichess.js`) that trims
+its games to one shared record, so nothing after `services/sync.js` cares where a game was played.
+A game is matched to the user by the username for its own site.
+
+chess.com files games by month, and unchanged months cost nothing to re-check. Lichess lists games
+by start time: the first sync takes a user's newest 1,000 games, and later ones ask for everything
+since a day before the newest game held (half a year for correspondence), so a game that was still
+being played last time is picked up. Lichess asks for one request at a time and sends about 20
+games a second, so a first import can take most of a minute and other users' Lichess syncs wait
+behind it.
+
+Adding a site keeps progress. Changing or removing a username starts that user over.
 
 ## Advice accuracy
 
@@ -77,6 +104,12 @@ npm run gift -- --list
 ```
 
 The gift waits for that address and starts the first time the person uses the app signed in with it.
+
+## Admins
+
+List admin email addresses in `ADMIN_ACCOUNTS`, separated by commas. An admin who selects a hidden
+tile on the map gets that opening's full study page without uncovering it. From there they can
+carry on to the hidden openings beyond it.
 
 ## Marketing email
 

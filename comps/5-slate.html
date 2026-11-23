@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comp 5 · Slate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Schibsted+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* Direction: the board colours become the whole palette. Dark, built from the two slates of the squares,
+   with the map laid over a giant faint chessboard. Poster-scale condensed type and one hot coral. */
+:root {
+  --night: #0E1419; --sq1: #131B22; --sq2: #18222B; --panel: #1B2731; --line: #2D3C48;
+  --light: #E3E8EB; --slate: #8CA2AE; --dim: #5F7684; --hot: #FF6A3D;
+  --sq-l: #E3E8EB; --sq-d: #8CA2AE; --pw: #FFFFFF; --pb: #1B222A;
+  --disp: "Big Shoulders Display", "Impact", "Arial Narrow", sans-serif;
+  --body: "Schibsted Grotesk", "Helvetica Neue", sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--night); color: var(--light); font: 15px/1.45 var(--body); }
+a { color: inherit; }
+.board { display: grid; grid-template-columns: repeat(8, var(--sq)); grid-auto-rows: var(--sq); font-size: calc(var(--sq) * .8); line-height: var(--sq); text-align: center; width: calc(var(--sq) * 8); flex: none; }
+.board i { font-style: normal; background: var(--sq-l); color: var(--pb); font-family: "Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols2", sans-serif; }
+.board i.d { background: var(--sq-d); }
+.board i.w { color: var(--pw); text-shadow: 0 0 1px #000, 0 0 1px #000, 0 0 2px #000; }
+
+.bar { display: flex; align-items: flex-end; gap: 34px; padding: 18px 36px 14px; }
+.brand { font: 900 40px/.85 var(--disp); text-transform: uppercase; letter-spacing: .01em; }
+.brand span { color: var(--slate); }
+.tabs { display: flex; gap: 26px; padding-bottom: 2px; }
+.tabs a { font: 800 20px/1 var(--disp); text-transform: uppercase; letter-spacing: .06em; text-decoration: none; color: var(--dim); padding-bottom: 5px; }
+.tabs a.on { color: var(--light); border-bottom: 4px solid var(--hot); }
+.bar .r { margin-left: auto; display: flex; gap: 18px; align-items: center; color: var(--slate); font-size: 13px; }
+.bar button { font: 800 17px var(--disp); letter-spacing: .08em; text-transform: uppercase; background: var(--light); color: var(--night); border: 0; padding: 9px 16px 8px; }
+
+.label { font: 800 14px var(--disp); letter-spacing: .2em; text-transform: uppercase; color: var(--dim); padding: 22px 36px 10px; }
+.screen { margin: 0 36px; display: grid; grid-template-columns: minmax(0, 1fr) 330px; }
+
+/* map: laid over a giant, barely lit chessboard */
+.viewport { padding: 40px 44px; overflow: auto; background: conic-gradient(var(--sq2) 25%, var(--sq1) 0 50%, var(--sq2) 0 75%, var(--sq1) 0) 0 0 / 232px 232px; }
+.canvas { position: relative; }
+.canvas svg { position: absolute; left: 0; top: 0; overflow: visible; }
+.e { stroke: var(--slate); stroke-width: 2; }
+.e.active { stroke: var(--hot); stroke-width: 3; }
+.e.fog { stroke: var(--dim); stroke-width: 1.5; stroke-dasharray: 2 6; }
+.tile { position: absolute; }
+.node { height: 100%; display: flex; flex-direction: column; }
+.node .board { box-shadow: 0 0 0 1px var(--night); }
+.node .mvn { font: 900 34px/.9 var(--disp); margin-top: 9px; display: flex; justify-content: space-between; align-items: baseline; }
+.node .mvn small { font: 800 15px var(--disp); letter-spacing: .08em; color: var(--slate); }
+.node .nm { font: 800 15px/1.05 var(--disp); text-transform: uppercase; letter-spacing: .07em; color: var(--slate); margin-top: 3px; }
+.node .prog { height: 4px; background: var(--line); margin-top: 8px; }
+.node .prog i { display: block; height: 100%; background: var(--light); }
+.done .mvn { color: var(--slate); } .done .board { opacity: .72; }
+.active .board { box-shadow: 0 0 0 4px var(--hot); }
+.active .mvn { color: var(--hot); } .active .mvn small { color: var(--hot); } .active .nm { color: var(--light); }
+.active .prog i { background: var(--hot); }
+.start .node { justify-content: center; }
+.fogn { height: 100%; display: flex; align-items: center; gap: 10px; font: 800 14px var(--disp); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.fogn b { width: 30px; height: 30px; flex: none; background: conic-gradient(var(--line) 25%, transparent 0 50%, var(--line) 0 75%, transparent 0) 0 0 / 15px 15px; outline: 1px solid var(--line); }
+.pc { width: 9px; height: 9px; border-radius: 50%; display: inline-block; background: var(--light); }
+.pc.b { background: var(--night); outline: 1.5px solid var(--slate); }
+
+.side { background: var(--panel); padding: 26px 26px 28px; }
+.side h3 { font: 800 14px var(--disp); letter-spacing: .2em; text-transform: uppercase; color: var(--dim); margin: 0 0 14px; }
+.side h3:not(:first-child) { margin-top: 30px; }
+.ms { border-top: 1px solid var(--line); padding: 14px 0 18px; display: grid; grid-template-columns: 1fr auto; gap: 0 12px; }
+.ms .who { font: 800 14px var(--disp); letter-spacing: .14em; text-transform: uppercase; color: var(--slate); display: flex; gap: 8px; align-items: center; }
+.ms .nm { font: 900 30px/.95 var(--disp); text-transform: uppercase; margin-top: 6px; }
+.ms .mv { color: var(--slate); font-size: 13px; margin-top: 4px; }
+.ms .ct { grid-row: 1 / 4; grid-column: 2; font: 900 76px/.8 var(--disp); color: var(--hot); align-self: end; }
+.ms .ct small { font-size: 30px; color: var(--dim); }
+.ms .prog { grid-column: 1 / -1; height: 5px; background: var(--line); margin-top: 14px; } .ms .prog i { display: block; height: 100%; background: var(--hot); }
+.ms p { grid-column: 1 / -1; margin: 9px 0 0; font-size: 13px; color: var(--slate); }
+.gm { border-top: 1px solid var(--line); padding: 9px 0; display: grid; grid-template-columns: 64px 1fr; font-size: 13.5px; line-height: 1.35; }
+.gm b { font: 800 17px var(--disp); letter-spacing: .08em; text-transform: uppercase; }
+.gm b.won { color: var(--light); } .gm b.lost { color: var(--hot); } .gm b.drawn { color: var(--slate); }
+.gm span { color: var(--slate); display: block; }
+.tot { margin-top: 18px; font-size: 13px; color: var(--dim); }
+
+/* strategy card: a poster */
+.poster { margin: 0 36px 70px; background: var(--panel); display: grid; grid-template-columns: 1fr auto; }
+.poster .l { padding: 34px 40px 36px; }
+.eyebrow { font: 800 16px var(--disp); letter-spacing: .18em; text-transform: uppercase; color: var(--hot); display: flex; gap: 10px; align-items: center; }
+.poster h2 { font: 900 132px/.82 var(--disp); text-transform: uppercase; margin: 12px 0 18px -4px; letter-spacing: -.005em; }
+.poster h2 span { color: var(--slate); }
+.blurb { font-size: 19px; line-height: 1.45; max-width: 34em; margin: 0 0 30px; }
+.nums { display: grid; grid-template-columns: repeat(4, auto); justify-content: start; gap: 0 44px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 16px 0 14px; margin-bottom: 30px; }
+.nums b { display: block; font: 900 62px/.9 var(--disp); }
+.nums div:first-child b { color: var(--hot); }
+.nums label { font: 800 13px var(--disp); letter-spacing: .16em; text-transform: uppercase; color: var(--slate); }
+.two { display: grid; grid-template-columns: 1fr 300px; gap: 44px; }
+.h { font: 800 14px var(--disp); letter-spacing: .2em; text-transform: uppercase; color: var(--dim); margin: 0 0 6px; }
+.ideas { list-style: none; margin: 0; padding: 0; }
+.ideas li { display: grid; grid-template-columns: 56px 1fr; align-items: baseline; padding: 12px 0; border-top: 1px solid var(--line); font-size: 17px; }
+.ideas li > b { font: 900 40px/.8 var(--disp); color: var(--slate); }
+.ideas small { display: block; font: 800 14px var(--disp); letter-spacing: .12em; text-transform: uppercase; color: var(--hot); margin-top: 5px; }
+.else { display: grid; grid-template-columns: 84px 1fr 26px; gap: 9px 10px; align-items: center; font-size: 14px; color: var(--slate); margin-top: 10px; }
+.else i { height: 10px; background: var(--slate); display: block; }
+.else .mine { color: var(--hot); } .else .mine + i { background: var(--hot); }
+.else span:nth-child(3n) { text-align: right; color: var(--light); }
+.poster .r { background: conic-gradient(var(--sq2) 25%, var(--sq1) 0 50%, var(--sq2) 0 75%, var(--sq1) 0) 0 0 / 120px 120px; padding: 40px; display: flex; flex-direction: column; gap: 18px; }
+.poster .r .board { box-shadow: 0 0 0 5px var(--hot); }
+.line { font: 900 44px/1 var(--disp); letter-spacing: .01em; }
+.line span { color: var(--dim); }
+.mvs { font-size: 14px; color: var(--slate); line-height: 1.6; } .mvs b { color: var(--light); font-weight: 500; }
+.btns { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
+.btns a { font: 800 17px var(--disp); letter-spacing: .08em; text-transform: uppercase; text-decoration: none; padding: 10px 16px 9px; border: 2px solid var(--light); text-align: center; }
+.btns a:first-child { background: var(--light); color: var(--night); }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="brand">Rank <span>&amp;</span> File</div>
+  <nav class="tabs"><a class="on" href="#">Map</a><a href="#">Games</a><a href="#">Openings</a><a href="#">Settings</a></nav>
+  <div class="r"><span>dtexus · synced 3 min ago</span><button>Check for new games</button></div>
+</header>
+
+<div class="label">Map</div>
+<div class="screen"><div class="viewport" id="map"></div><aside class="side" id="side"></aside></div>
+
+<div class="label">Strategy card</div>
+<div class="poster" id="card"></div>
+
+<script src="comp.js"></script>
+<script>
+const { board, sideName, card: c } = Comp
+Comp.nav('5-slate')
+
+Comp.map(document.getElementById('map'), {
+  W: 136, GAP_X: 76, GAP_Y: 18, edge: 'straight',
+  height: (n) => (n.fog ? 30 : n.status === 'start' ? 136 : 222),
+  out: (it) => [136 + 8, it.n.status === 'start' ? it.h / 2 : 68],
+  into: (it) => [-8, it.n.fog || it.n.status === 'start' ? it.h / 2 : 68],
+  node: (n) => n.status === 'start'
+    ? `<div class="node">${board(n.fen, { sq: 17 })}</div>`
+    : `<div class="node">${board(n.fen, { flip: n.side === 'b', sq: 17 })}
+        <div class="mvn">${n.move}<small>${n.count}/${n.target}</small></div>
+        <div class="nm">${n.name}</div>
+        <div class="prog"><i style="width:${(n.count / n.target) * 100}%"></i></div></div>`,
+  fog: (n) => `<div class="fogn"><b></b><span class="pc ${n.side}"></span>Hidden</div>`,
+})
+
+document.getElementById('side').innerHTML = `
+  <h3>Active missions</h3>
+  ${Comp.missions.map((m) => `<div class="ms">
+    <div class="who"><span class="pc ${m.side}"></span>As ${sideName(m.side)}</div>
+    <div class="nm">${m.name}</div><div class="mv">${m.moves}</div>
+    <div class="ct">${m.count}<small>/${m.target}</small></div>
+    <div class="prog"><i style="width:${(m.count / m.target) * 100}%"></i></div>
+    <p>${m.reach}.</p></div>`).join('')}
+  <h3>Latest games</h3>
+  ${Comp.latest.map((g) => `<div class="gm"><b class="${g.result.toLowerCase()}">${g.result}</b><div>${g.opening === 'undiscovered' ? 'A hidden opening' : g.opening}<span>${sideName(g.side)} · ${g.verdict}</span></div></div>`).join('')}
+  <div class="tot">4 of 60 openings uncovered · 2 complete</div>`
+
+const max = Math.max(...c.elsewhere.map((e) => e.count))
+document.getElementById('card').innerHTML = `
+  <div class="l">
+    <div class="eyebrow"><span class="pc ${c.side}"></span>Active ${sideName(c.side)} mission · ECO ${c.eco}</div>
+    <h2>King's Knight <span>Opening</span></h2>
+    <p class="blurb">${c.blurb}</p>
+    <div class="nums">
+      <div><b>${c.count}/${c.target}</b><label>Mission</label></div>
+      <div><b>${c.stats.pct}%</b><label>Reach rate · ${c.stats.reached} of ${c.stats.of}</label></div>
+      <div><b>${c.stats.win}–${c.stats.draw}–${c.stats.loss}</b><label>Won · drawn · lost</label></div>
+      <div><b>${c.stats.accuracy}%</b><label>Advice accuracy · last ${c.stats.scored}</label></div>
+    </div>
+    <div class="two">
+      <div><div class="h">Ideas</div>
+        <ol class="ideas">${c.ideas.map((i, n) => `<li><b>${n + 1}</b><span>${i.text}${i.of ? `<small>Followed ${i.followed} of ${i.of}</small>` : ''}</span></li>`).join('')}</ol></div>
+      <div><div class="h">Where the other ${c.stats.of - c.stats.reached} went</div>
+        <div class="else">${c.elsewhere.map((e) => `<span class="${e.mine ? 'mine' : ''}">${e.move}${e.mine ? ' (you)' : ''}</span><i style="width:${(e.count / max) * 100}%"></i><span>${e.count}</span>`).join('')}</div></div>
+    </div>
+  </div>
+  <div class="r">
+    ${board(c.fen, { sq: 42 })}
+    <div class="line">1.e4 <span>e5</span> 2.Nf3</div>
+    <div class="mvs"><b>Your moves</b> ${c.yourMoves.join(', ')}<br><b>Opponent has to play</b> ${c.theirMoves.join(', ')}</div>
+    <div class="btns"><a href="#">Open position on chess.com</a><a href="#">Lichess explorer</a></div>
+  </div>`
+</script>
+</body>
+</html>

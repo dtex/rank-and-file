@@ -32,8 +32,12 @@ test('formatMove', () => {
 
 test('userSide and userResult', () => {
   const g = game('e4 e5')
-  assert.equal(userSide(g, 'me'), 'w')
-  assert.equal(userSide(g, 'nobody'), null)
+  assert.equal(userSide(g, { usernames: { chesscom: 'me' } }), 'w')
+  assert.equal(userSide(g, { username: 'me' }), 'w', 'settings saved before Lichess was supported')
+  assert.equal(userSide(g, { usernames: { chesscom: 'nobody' } }), null)
+  // A game is matched against the account on its own site: the same name elsewhere is another person.
+  assert.equal(userSide(g, { usernames: { lichess: 'me' } }), null)
+  assert.equal(userSide({ ...g, site: 'lichess' }, { usernames: { chesscom: 'other', lichess: 'ME' } }), 'w')
   assert.equal(userResult(g, 'w'), 'win')
   assert.equal(userResult(g, 'b'), 'loss')
   assert.equal(userResult(game('e4', { white: { name: 'me', result: 'stalemate' } }), 'w'), 'draw')

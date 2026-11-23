@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comp 2 · Field manual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Direction: a field manual. The name is "Rank and File" and the app already talks about missions and fog,
+   so this leans into it: khaki stock, olive ink, a survey grid lettered like a chessboard, one signal orange. */
+:root {
+  --khaki: #D8D2BA; --stock: #E8E4D2; --ink: #1E2219; --olive: #4A5223; --deep: #2B3016; --dim: #6C6F58; --grid: #BDB79C; --signal: #D4481A;
+  --sq-l: #E3E8EB; --sq-d: #8CA2AE; --pw: #FFFFFF; --pb: #1B222A;
+  --cond: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: "Barlow", "Helvetica Neue", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--khaki); color: var(--ink); font: 15px/1.45 var(--body); }
+a { color: inherit; }
+.board { display: grid; grid-template-columns: repeat(8, var(--sq)); grid-auto-rows: var(--sq); font-size: calc(var(--sq) * .8); line-height: var(--sq); text-align: center; width: calc(var(--sq) * 8); flex: none; border: 2px solid var(--deep); }
+.board i { font-style: normal; background: var(--sq-l); color: var(--pb); font-family: "Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols2", sans-serif; }
+.board i.d { background: var(--sq-d); }
+.board i.w { color: var(--pw); text-shadow: 0 0 1px #000, 0 0 1px #000, 0 0 2px #000; }
+
+.bar { background: var(--deep); color: var(--stock); display: flex; align-items: stretch; padding: 0 28px; }
+.brand { font: 700 28px/1 var(--cond); letter-spacing: .06em; text-transform: uppercase; padding: 14px 26px 12px 0; border-right: 1px solid rgb(232 228 210 / .25); }
+.brand small { display: block; font: 400 11px var(--mono); letter-spacing: .08em; opacity: .7; margin-top: 4px; }
+.tabs { display: flex; }
+.tabs a { font: 600 17px var(--cond); letter-spacing: .1em; text-transform: uppercase; text-decoration: none; padding: 0 22px; display: flex; align-items: center; border-right: 1px solid rgb(232 228 210 / .25); opacity: .7; }
+.tabs a.on { background: var(--signal); color: #fff; opacity: 1; }
+.bar .r { margin-left: auto; display: flex; align-items: center; gap: 16px; font: 400 12px var(--mono); }
+.bar button { font: 600 15px var(--cond); letter-spacing: .1em; text-transform: uppercase; background: none; color: inherit; border: 1.5px solid currentColor; padding: 6px 14px; }
+
+.label { font: 500 11px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--dim); padding: 24px 28px 8px; }
+.screen { margin: 0 28px; display: grid; grid-template-columns: 1fr 320px; border: 2px solid var(--deep); }
+
+/* map: a survey sheet with files along the bottom and ranks up the side */
+.viewport { position: relative; padding: 40px 40px 56px 64px; overflow: auto; background:
+  linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 100% 96px, linear-gradient(90deg, var(--grid) 1px, transparent 1px) 64px 0 / 126px 100%, var(--stock); }
+.ranks, .files { position: absolute; font: 500 12px var(--mono); color: var(--dim); display: flex; }
+.ranks { left: 0; top: 0; bottom: 0; width: 40px; flex-direction: column; border-right: 2px solid var(--deep); background: var(--khaki); }
+.ranks span { height: 96px; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid var(--grid); }
+.files { left: 40px; right: 0; bottom: 0; height: 28px; border-top: 2px solid var(--deep); background: var(--khaki); padding-left: 24px; }
+.files span { width: 126px; display: flex; align-items: center; justify-content: center; border-right: 1px solid var(--grid); }
+.canvas { position: relative; }
+.canvas svg { position: absolute; left: 0; top: 0; overflow: visible; }
+.e { stroke: var(--deep); stroke-width: 3; }
+.e.active { stroke: var(--signal); }
+.e.fog { stroke: var(--dim); stroke-width: 1.5; stroke-dasharray: 6 6; }
+.tile { position: absolute; }
+.node { height: 100%; background: var(--stock); border: 2px solid var(--deep); display: flex; flex-direction: column; }
+.node .hd { background: var(--olive); color: var(--stock); font: 500 11px var(--mono); letter-spacing: .08em; padding: 4px 8px; display: flex; justify-content: space-between; text-transform: uppercase; }
+.node .bd { padding: 8px; display: flex; flex-direction: column; align-items: center; flex: 1; }
+.node .nm { font: 700 19px/1 var(--cond); text-transform: uppercase; letter-spacing: .02em; align-self: stretch; min-height: 38px; margin-bottom: 6px; }
+.node .ft { align-self: stretch; margin-top: auto; }
+.node .st { font: 600 13px var(--cond); letter-spacing: .12em; text-transform: uppercase; display: flex; justify-content: space-between; margin-bottom: 4px; }
+.segs { display: flex; gap: 2px; }
+.segs i { flex: 1; height: 8px; border: 1.5px solid var(--deep); }
+.segs i.on { background: var(--deep); }
+.active .node { border-color: var(--signal); outline: 2px solid var(--signal); outline-offset: 3px; }
+.active .node .hd { background: var(--signal); color: #fff; }
+.active .segs i { border-color: var(--signal); } .active .segs i.on { background: var(--signal); }
+.active .st { color: var(--signal); }
+.start .node .bd { justify-content: center; gap: 8px; }
+.fogn { height: 100%; border: 1.5px dashed var(--dim); color: var(--dim); font: 600 13px var(--cond); letter-spacing: .14em; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: repeating-linear-gradient(135deg, transparent 0 6px, rgb(108 111 88 / .22) 6px 7px), var(--stock); }
+.pc { width: 11px; height: 11px; border: 2px solid var(--deep); display: inline-block; flex: none; }
+.pc.b { background: var(--deep); } .pc.w { background: #fff; }
+
+.side { border-left: 2px solid var(--deep); background: var(--khaki); }
+.side h3 { margin: 0; background: var(--deep); color: var(--stock); font: 600 15px var(--cond); letter-spacing: .14em; text-transform: uppercase; padding: 7px 16px; }
+.order { padding: 14px 16px 16px; border-bottom: 2px solid var(--deep); }
+.order .who { font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; display: flex; gap: 8px; align-items: center; color: var(--dim); }
+.order .nm { font: 700 26px/1 var(--cond); text-transform: uppercase; margin: 6px 0 2px; }
+.order .mv { font: 400 13px var(--mono); }
+.order .ct { font: 700 30px/1 var(--cond); margin: 12px 0 6px; } .order .ct small { font: 600 15px var(--cond); letter-spacing: .1em; color: var(--dim); }
+.order p { margin: 8px 0 0; font-size: 13px; color: var(--dim); }
+.rep { padding: 10px 16px; border-bottom: 1px solid var(--grid); display: grid; grid-template-columns: 20px 1fr; font-size: 14px; }
+.rep b { font: 700 15px var(--cond); letter-spacing: .08em; text-transform: uppercase; }
+.rep .v { grid-column: 2; font: 400 12px var(--mono); color: var(--dim); }
+.rep em { color: var(--dim); }
+.tot { padding: 14px 16px; font: 500 12px var(--mono); color: var(--dim); }
+
+/* strategy card: a briefing sheet */
+.brief { margin: 0 28px 60px; border: 2px solid var(--deep); background: var(--stock); }
+.brief .top { display: grid; grid-template-columns: 1fr auto; border-bottom: 2px solid var(--deep); }
+.brief .ttl { padding: 18px 24px 16px; }
+.brief .ttl .k { font: 500 12px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--signal); }
+.brief h1 { font: 700 64px/.92 var(--cond); text-transform: uppercase; letter-spacing: .005em; margin: 6px 0 8px; }
+.brief .ttl .mv { font: 500 17px var(--mono); }
+.meta { display: grid; grid-template-columns: repeat(3, 120px); border-left: 2px solid var(--deep); }
+.meta div { padding: 16px 16px 12px; border-right: 1px solid var(--grid); display: flex; flex-direction: column; justify-content: space-between; }
+.meta div:last-child { border-right: 0; background: var(--signal); color: #fff; }
+.meta label { font: 500 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; opacity: .75; }
+.meta b { font: 700 42px/1 var(--cond); text-transform: uppercase; }
+.cols { display: grid; grid-template-columns: auto 1fr 320px; }
+.cols > div { padding: 22px 24px 26px; }
+.cols > div + div { border-left: 2px solid var(--deep); }
+.sec { font: 600 15px var(--cond); letter-spacing: .14em; text-transform: uppercase; color: var(--olive); border-bottom: 2px solid var(--olive); padding-bottom: 3px; margin: 0 0 10px; }
+.sec:not(:first-child) { margin-top: 24px; }
+.sit { font-size: 17px; line-height: 1.45; margin: 0; }
+.orders { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+.orders .mv { font: 500 20px var(--mono); }
+.orders label { font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); display: block; }
+.doc { list-style: none; margin: 0; padding: 0; }
+.doc li { display: grid; grid-template-columns: 34px 1fr auto; gap: 0 8px; align-items: start; padding: 9px 0; border-bottom: 1px solid var(--grid); font-size: 16px; }
+.doc li > b { font: 700 22px/1 var(--cond); color: var(--olive); }
+.tag { font: 600 13px var(--cond); letter-spacing: .1em; text-transform: uppercase; border: 1.5px solid var(--deep); padding: 1px 7px; white-space: nowrap; }
+.btns { display: flex; gap: 10px; margin-top: 22px; }
+.btns a { font: 600 15px var(--cond); letter-spacing: .1em; text-transform: uppercase; text-decoration: none; border: 2px solid var(--deep); padding: 7px 14px; }
+.btns a:first-child { background: var(--deep); color: var(--stock); }
+.kv { display: grid; grid-template-columns: 1fr auto; font-size: 15px; }
+.kv > * { padding: 7px 0; border-bottom: 1px solid var(--grid); }
+.kv b { font: 700 22px/1 var(--cond); text-align: right; }
+.else { display: grid; grid-template-columns: 64px 1fr 28px; gap: 7px 10px; align-items: center; font: 500 13px var(--mono); }
+.else i { height: 12px; background: var(--deep); display: block; }
+.else .mine { color: var(--signal); } .else .mine + i { background: var(--signal); }
+.note { font-size: 13px; color: var(--dim); margin: 10px 0 0; }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="brand">Rank and File<small>CHESS TRAINING FOR THE REST OF US</small></div>
+  <nav class="tabs"><a class="on" href="#">Map</a><a href="#">Games</a><a href="#">Openings</a><a href="#">Settings</a></nav>
+  <div class="r"><span>DTEXUS · SYNCED 3 MIN AGO</span><button>Check for new games</button></div>
+</header>
+
+<div class="label">Map</div>
+<div class="screen">
+  <div class="viewport"><div id="map"></div>
+    <div class="ranks"></div><div class="files"></div></div>
+  <aside class="side" id="side"></aside>
+</div>
+
+<div class="label">Strategy card</div>
+<div class="brief" id="card"></div>
+
+<script src="comp.js"></script>
+<script>
+const { board, sideName, card: c } = Comp
+Comp.nav('2-field-manual')
+const segs = (n, of) => `<div class="segs">${Array.from({ length: of }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</div>`
+const WORD = { done: 'Secured', active: 'In progress', parked: 'On hold' }
+let obj = 0
+
+Comp.map(document.getElementById('map'), {
+  W: 150, GAP_X: 60, GAP_Y: 14, edge: 'elbow',
+  height: (n) => (n.fog ? 40 : n.status === 'start' ? 150 : 226),
+  node: (n) => n.status === 'start'
+    ? `<div class="node"><div class="hd"><span>Start</span><span>00</span></div><div class="bd">${board(n.fen, { sq: 13 })}</div></div>`
+    : `<div class="node">
+        <div class="hd"><span>${sideName(n.side)} · ${n.move}</span><span>${n.eco}</span></div>
+        <div class="bd"><div class="nm">${n.name.replace(' Opening', '')}</div>
+          ${board(n.fen, { flip: n.side === 'b', sq: 13 })}
+          <div class="ft"><div class="st"><span>${WORD[n.status]}</span><span>${n.count}/${n.target}</span></div>${segs(n.count, n.target)}</div></div>
+      </div>`,
+  fog: (n) => `<div class="fogn"><span class="pc ${n.side}"></span>Unscouted</div>`,
+})
+document.querySelector('.ranks').innerHTML = [8, 7, 6, 5, 4, 3, 2, 1, '', ''].map((r) => `<span>${r}</span>`).join('')
+document.querySelector('.files').innerHTML = [...'ABCDEFGH'].map((f) => `<span>${f}</span>`).join('')
+
+document.getElementById('side').innerHTML = `
+  <h3>Standing orders</h3>
+  ${Comp.missions.map((m) => `<div class="order">
+    <div class="who"><span class="pc ${m.side}"></span>As ${sideName(m.side)}</div>
+    <div class="nm">${m.name.replace(' Opening', '')}</div><div class="mv">${m.moves}</div>
+    <div class="ct">${m.count} <small>OF ${m.target}</small></div>${segs(m.count, m.target)}
+    <p>${m.reach}.</p></div>`).join('')}
+  <h3>Field reports</h3>
+  ${Comp.latest.map((g) => `<div class="rep"><span class="pc ${g.side}" style="margin-top:4px"></span>
+    <div><b>${g.result}</b> · ${g.opening === 'undiscovered' ? '<em>unscouted</em>' : g.opening}</div><span class="v">${g.verdict}</span></div>`).join('')}
+  <div class="tot">4 OF 60 OPENINGS UNCOVERED · 2 SECURED</div>`
+
+const max = Math.max(...c.elsewhere.map((e) => e.count))
+document.getElementById('card').innerHTML = `
+  <div class="top">
+    <div class="ttl"><div class="k">Briefing · Active mission</div><h1>${c.name}</h1><div class="mv">${c.moves}</div></div>
+    <div class="meta"><div><label>Playing</label><b>${sideName(c.side)}</b></div><div><label>ECO</label><b>${c.eco}</b></div><div><label>Mission</label><b>${c.count}/${c.target}</b></div></div>
+  </div>
+  <div class="cols">
+    <div>${board(c.fen, { sq: 36 })}</div>
+    <div>
+      <div class="sec">Situation</div><p class="sit">${c.blurb}</p>
+      <div class="sec">Moves</div>
+      <div class="orders"><div><label>Yours</label><span class="mv">${c.yourMoves.join('  ')}</span></div><div><label>Opponent has to play</label><span class="mv">${c.theirMoves.join('  ')}</span></div></div>
+      <div class="sec">Ideas</div>
+      <ol class="doc">${c.ideas.map((i, n) => `<li><b>${String(n + 1).padStart(2, '0')}</b><span>${i.text}</span>${i.of ? `<span class="tag">Followed ${i.followed}/${i.of}</span>` : '<span></span>'}</li>`).join('')}</ol>
+      <div class="btns"><a href="#">Open position on chess.com</a><a href="#">Lichess explorer</a></div>
+    </div>
+    <div>
+      <div class="sec">Your record, as ${sideName(c.side)}</div>
+      <div class="kv">
+        <span>Games that reached it</span><b>${c.stats.reached} / ${c.stats.of}</b>
+        <span>Reach rate</span><b>${c.stats.pct}%</b>
+        <span>Won / drawn / lost</span><b>${c.stats.win} / ${c.stats.draw} / ${c.stats.loss}</b>
+        <span>Advice accuracy, last ${c.stats.scored}</span><b>${c.stats.accuracy}%</b>
+      </div>
+      <div class="sec">Where the other ${c.stats.of - c.stats.reached} went</div>
+      <div class="else">${c.elsewhere.map((e) => `<span class="${e.mine ? 'mine' : ''}">${e.move}</span><i style="width:${(e.count / max) * 100}%"></i><span>${e.count}</span>`).join('')}</div>
+      <p class="note">Orange is where you left the line yourself.</p>
+    </div>
+  </div>`
+</script>
+</body>
+</html>

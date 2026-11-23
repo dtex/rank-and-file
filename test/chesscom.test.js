@@ -72,12 +72,12 @@ test('pullGames stores new games once and skips unchanged months', async () => {
     '2026-11': [raw({ uuid: 'c', end_time: 1755000000 })],
   }
   const api = fakeChessCom(months)
-  const first = await pullGames({ store, username: 'dtexus', fetchImpl: api.impl })
+  const { added: first } = await pullGames({ store, settings: { usernames: { chesscom: 'dtexus' } }, fetchImpl: api.impl })
   assert.deepEqual(first.map((g) => g.uuid), ['a', 'b', 'c'])
 
   months['2026-11'].push(raw({ uuid: 'd', end_time: 1755000500 }))
   api.calls.length = 0
-  const second = await pullGames({ store, username: 'dtexus', fetchImpl: api.impl })
+  const { added: second } = await pullGames({ store, settings: { usernames: { chesscom: 'dtexus' } }, fetchImpl: api.impl })
   assert.deepEqual(second.map((g) => g.uuid), ['d'])
   assert.equal(api.calls.some((u) => u.endsWith('2026/09')), false, 'old months are not refetched')
   assert.equal((await store.loadAllGames()).length, 4)

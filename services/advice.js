@@ -24,7 +24,7 @@ const pct = (xs) => Math.round(mean(xs) * 100)
 export function gameAdvice(tree, progress, game) {
   const { settings } = progress
   if (game.end <= progress.createdAt || !game.moves?.length) return null
-  const side = userSide(game, settings.username)
+  const side = userSide(game, settings)
   if (!side || ineligibleReason(game, settings)) return null
   const keys = gameKeys(game)
   const openings = []
