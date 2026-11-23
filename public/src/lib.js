@@ -7,6 +7,9 @@ export class View extends LitElement {
   }
 }
 
+/** Where the app lives; the marketing site has the root. Keep in step with services/site.js. */
+export const APP_PATH = '/app'
+
 /** The name and what it stands for, shown together wherever the app introduces itself. */
 export const TAGLINE = 'Chess training for the rest of us'
 

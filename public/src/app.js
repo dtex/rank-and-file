@@ -1,5 +1,5 @@
 import { html, nothing } from 'lit'
-import { TAGLINE, View, api, ago, board, sideName, wordmark } from './lib.js'
+import { APP_PATH, TAGLINE, View, api, ago, board, sideName, wordmark } from './lib.js'
 import './map.js'
 import './settings.js'
 import './games.js'
@@ -39,7 +39,7 @@ class CbApp extends View {
     // An emailed link arrives as #magic=<token>. Take it out of the address bar straight away.
     const magic = location.hash.match(/^#magic=([\w-]+)$/)
     const loginError = location.hash.match(/^#login-error=([\w-]+)$/)
-    if (magic || loginError) history.replaceState(null, '', '/')
+    if (magic || loginError) history.replaceState(null, '', APP_PATH)
     this.magic = magic?.[1] ?? null
     this.loginError = loginError?.[1] ?? null
 
@@ -60,7 +60,7 @@ class CbApp extends View {
   async afterCheckout() {
     const q = new URLSearchParams(location.search)
     if (q.get('billing') !== 'success') return
-    history.replaceState(null, '', `/${location.hash}`)
+    history.replaceState(null, '', `${APP_PATH}${location.hash}`)
     if (!this.me) return
     try {
       await api('/api/billing/confirm', { method: 'POST', body: { sessionId: q.get('session_id') } })

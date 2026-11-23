@@ -2,6 +2,15 @@
 
 Chess training for the rest of us. Opening missions tracked against your chess.com games, for any number of players.
 
+## The site and the app
+
+The marketing site has the root: `/`, `/features` and `/pricing`, written in `routes/site.js` and
+sharing a shell with `/privacy` and `/terms` (`services/site.js`). They are plain HTML from the
+server, each with its questions and answers both on the page and as FAQPage data, plus
+`/robots.txt` and `/sitemap.xml`. The figures they quote are read from the code and `data/tree.json`.
+
+The app itself is one page at `/app`. Sign-in, emailed links and Stripe all return there.
+
 ## Opening missions
 
 You get a mission for one opening per colour, play your normal chess.com games, and the app

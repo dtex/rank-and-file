@@ -1,6 +1,6 @@
 // Signing in, the consent step, first-time setup, and the account section of Settings.
 import { html, nothing } from 'lit'
-import { TAGLINE, View, api, wordmark } from './lib.js'
+import { APP_PATH, TAGLINE, View, api, wordmark } from './lib.js'
 
 const LOGIN_ERRORS = {
   'no-email': 'That account has no verified email address, which Rank and File needs. Verify it there, or use an email link.',
@@ -78,7 +78,7 @@ class CbMagic extends View {
     try {
       const res = await api('/auth/magic/verify', { method: 'POST', body: { token: this.token } })
       if (res.purpose === 'change_email') this.done = true
-      else location.replace('/')
+      else location.replace(APP_PATH)
     } catch (err) {
       this.error = err.message
     } finally {
@@ -87,8 +87,8 @@ class CbMagic extends View {
   }
 
   render() {
-    if (this.done) return gate(html`<h2>Email address confirmed</h2><p>Your account now uses the new address.</p><a class="btn pri" href="/">Continue</a>`)
-    if (this.error) return gate(html`<h2>That link did not work</h2><p>${this.error}</p><a class="btn" href="/">Back to sign-in</a>`)
+    if (this.done) return gate(html`<h2>Email address confirmed</h2><p>Your account now uses the new address.</p><a class="btn pri" href=${APP_PATH}>Continue</a>`)
+    if (this.error) return gate(html`<h2>That link did not work</h2><p>${this.error}</p><a class="btn" href=${APP_PATH}>Back to sign-in</a>`)
     return gate(html`<h2>Almost there</h2><p>Select the button to finish.</p>
       <div><button class="pri" ?disabled=${this.busy} @click=${() => this.confirm()}>${this.busy ? 'One moment…' : 'Continue to Rank and File'}</button></div>`)
   }
@@ -123,7 +123,7 @@ class CbConsent extends View {
     try {
       await api('/api/account', { method: 'DELETE' })
     } finally {
-      location.replace('/')
+      location.replace(APP_PATH)
     }
   }
 
@@ -218,14 +218,14 @@ class CbAccount extends View {
   signOut() {
     return this.run(async () => {
       await api('/auth/logout', { method: 'POST' })
-      location.replace('/')
+      location.replace(APP_PATH)
     })
   }
 
   remove() {
     return this.run(async () => {
       await api('/api/account', { method: 'DELETE' })
-      location.replace('/')
+      location.replace(APP_PATH)
     })
   }
 

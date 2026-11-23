@@ -102,7 +102,7 @@ test('Google and GitHub sign in by verified email, and the same email is the sam
   assert.equal(to.searchParams.get('scope'), 'openid email')
   assert.equal(to.searchParams.get('redirect_uri'), 'http://localhost:3210/auth/google/callback')
   assert.equal(to.searchParams.get('code_challenge_method'), 'S256')
-  assert.deepEqual([back.statusCode, back.headers.location], [302, '/'])
+  assert.deepEqual([back.statusCode, back.headers.location], [302, '/app'])
   const sent = new URLSearchParams(providers.seen.find((s) => s.url.endsWith('/token')).opts.body)
   assert.ok(sent.get('code_verifier'), 'the PKCE verifier goes with the code')
   assert.equal((await g.get('/api/me')).json().email, email)
@@ -110,7 +110,7 @@ test('Google and GitHub sign in by verified email, and the same email is the sam
   const h = client(ctx.app)
   const gh = await oauth(h, 'github', 'hcode')
   assert.equal(gh.to.searchParams.get('scope'), 'user:email')
-  assert.equal(gh.back.headers.location, '/')
+  assert.equal(gh.back.headers.location, '/app')
 
   const m = await signIn(ctx, email, { ready: false })
   const me = (await m.get('/api/me')).json()
@@ -126,16 +126,16 @@ test('sign-in is refused without a verified email, a matching state, or a good c
   for (const [provider, code] of [['google', 'gcode'], ['github', 'hcode']]) {
     const c = client(ctx.app)
     const { back } = await oauth(c, provider, code)
-    assert.equal(back.headers.location, '/#login-error=no-email', provider)
+    assert.equal(back.headers.location, '/app#login-error=no-email', provider)
     assert.equal((await c.get('/api/me')).statusCode, 401)
   }
   assert.equal((await ctx.pool.query('select 1 from users where email = $1', [email])).rowCount, 0, 'no account is created')
 
   const c = client(ctx.app)
   await c.get('/auth/google/start')
-  assert.equal((await c.get('/auth/google/callback?code=gcode&state=forged')).headers.location, '/#login-error=expired')
-  assert.equal((await oauth(client(ctx.app), 'google', 'wrong')).back.headers.location, '/#login-error=provider')
-  assert.equal((await client(ctx.app).get('/auth/google/callback?code=gcode&state=x')).headers.location, '/#login-error=expired', 'no attempt cookie')
+  assert.equal((await c.get('/auth/google/callback?code=gcode&state=forged')).headers.location, '/app#login-error=expired')
+  assert.equal((await oauth(client(ctx.app), 'google', 'wrong')).back.headers.location, '/app#login-error=provider')
+  assert.equal((await client(ctx.app).get('/auth/google/callback?code=gcode&state=x')).headers.location, '/app#login-error=expired', 'no attempt cookie')
 })
 
 test('only configured providers are offered', async () => {

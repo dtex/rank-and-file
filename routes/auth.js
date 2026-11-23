@@ -3,6 +3,7 @@ import { PROVIDERS } from '../services/auth/providers/index.js'
 import { authorizeUrl, completeSignIn, newAttempt } from '../services/auth/oauth.js'
 import { LINK_MINUTES, SESSION_DAYS, isEmail, normalizeEmail } from '../services/accounts.js'
 import { linkEmail } from '../services/mailer.js'
+import { APP_PATH } from '../services/site.js'
 
 export const SESSION_COOKIE = 'cb_sid'
 const ATTEMPT_COOKIE = 'cb_oauth'
@@ -35,7 +36,7 @@ export default async function authRoutes(app) {
   })
 
   app.get('/auth/:provider/callback', limit(20), async (req, reply) => {
-    const fail = (code) => reply.clearCookie(ATTEMPT_COOKIE, cookieBase).redirect(`/#login-error=${code}`)
+    const fail = (code) => reply.clearCookie(ATTEMPT_COOKIE, cookieBase).redirect(`${APP_PATH}#login-error=${code}`)
     const provider = enabled(req.params.provider)
     if (!provider) return fail('unavailable')
 
@@ -59,7 +60,7 @@ export default async function authRoutes(app) {
 
     const userId = await accounts.signIn({ provider: provider.id, subject: profile.subject, email: profile.email })
     await startSession(reply, userId)
-    return reply.clearCookie(ATTEMPT_COOKIE, cookieBase).redirect('/')
+    return reply.clearCookie(ATTEMPT_COOKIE, cookieBase).redirect(APP_PATH)
   })
 
   // Always answers the same way, so it cannot be used to find out who has an account.

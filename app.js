@@ -17,6 +17,7 @@ import billingRoutes, { stripeWebhook } from './routes/billing.js'
 import legalRoutes from './routes/legal.js'
 import missionRoutes from './routes/missions.js'
 import settingsRoutes from './routes/settings.js'
+import siteRoutes from './routes/site.js'
 import syncRoutes from './routes/sync.js'
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url))
@@ -77,7 +78,9 @@ export function buildApp({ pool, config = loadConfig(), fetchImpl = fetch, maile
     reply.code(status).send({ error: status >= 500 ? 'Something went wrong on our side.' : message, ...(status < 500 ? extra : {}) })
   })
 
-  app.register(fastifyStatic, { root: path.join(ROOT, 'public') })
+  // The marketing site has the root; the app itself is one page at /app (routes/site.js).
+  app.register(fastifyStatic, { root: path.join(ROOT, 'public'), index: false })
+  app.register(siteRoutes)
   app.register(authRoutes)
   app.register(legalRoutes)
   app.register(stripeWebhook)

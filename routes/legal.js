@@ -4,39 +4,27 @@
 import { LINK_MINUTES, POLICY_VERSION, SESSION_DAYS } from '../services/accounts.js'
 import { GIFT_RENEW_DAYS } from '../services/billing.js'
 import { FREE_OPENINGS } from '../services/missions.js'
+import { esc, sitePage } from '../services/site.js'
 
-const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
-
-const layout = (title, body) => `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${title} · Rank and File</title>
-  <link rel="stylesheet" href="/app.css">
-</head>
-<body>
-  <header class="mast">
-    <a class="brand" href="/" aria-label="Rank and File">Rank <em>&amp;</em> File</a>
-    <div class="tagline">Chess training for the rest of us</div>
-    <nav class="tabs caps"><a class="tab${title === 'Privacy Policy' ? ' on' : ''}" href="/privacy">Privacy</a><a class="tab${title === 'Terms of Use' ? ' on' : ''}" href="/terms">Terms</a><a class="tab" href="/">The app</a></nav>
-  </header>
-  <div class="page"><article class="legal">
+/** Both pages use the site's shell, set as a single column of text. */
+const layout = (config, path, title, description, body) => sitePage({
+  config, path, title, description,
+  body: `<article class="legal">
     <h1>${title}</h1>
     <p class="muted">Version ${POLICY_VERSION}</p>
     ${body}
-  </article></div>
-</body>
-</html>`
+  </article>`,
+})
 
 export default async function legalRoutes(app) {
-  const { legal } = app.ctx.config
+  const { config } = app.ctx
+  const { legal } = config
   // A missing detail shows as an obvious gap rather than a wrong statement.
   const v = (value, what) => (value ? esc(value) : `<mark>[${what} not set]</mark>`)
   const operator = v(legal.operator, 'operator name')
   const contact = legal.contact ? `<a href="mailto:${esc(legal.contact)}">${esc(legal.contact)}</a>` : v('', 'contact email')
 
-  app.get('/privacy', async (req, reply) => reply.type('text/html').send(layout('Privacy Policy', `
+  app.get('/privacy', async (req, reply) => reply.type('text/html').send(layout(config, '/privacy', 'Privacy Policy', 'What Rank and File keeps about you, why, and what you can do about it.', `
     <p>Rank and File is run by ${operator} (“we”). This page says what we keep about you, why, and what you can do about it.
       Questions and requests go to ${contact}${legal.address ? `, or by post to ${esc(legal.address)}` : ''}.</p>
 
@@ -101,7 +89,7 @@ export default async function legalRoutes(app) {
     <h2>Changes</h2>
     <p>If this policy changes in a way that matters, we will tell you in the app before it takes effect. The version date is at the top.</p>`)))
 
-  app.get('/terms', async (req, reply) => reply.type('text/html').send(layout('Terms of Use', `
+  app.get('/terms', async (req, reply) => reply.type('text/html').send(layout(config, '/terms', 'Terms of Use', 'The agreement for using Rank and File, including free use, membership and cancellation.', `
     <p>These terms are an agreement between you and ${operator} (“we”) for using Rank and File. Contact: ${contact}.</p>
 
     <h2>The service</h2>

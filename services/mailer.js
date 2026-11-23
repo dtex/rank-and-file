@@ -1,6 +1,7 @@
 // Outgoing mail over SMTP. Built for Google Workspace's relay (smtp-relay.gmail.com),
 // but any SMTP server works: only the settings differ.
 import nodemailer from 'nodemailer'
+import { APP_PATH } from './site.js'
 
 export function createMailer(config, log = console) {
   if (!config.smtp.host) {
@@ -31,7 +32,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 
 /** The sign-in or confirm-address email. The token rides in the URL fragment, which is never sent to a server or logged. */
 export function linkEmail({ baseUrl, token, purpose, minutes }) {
-  const url = `${baseUrl}/#magic=${token}`
+  const url = `${baseUrl}${APP_PATH}#magic=${token}`
   const change = purpose === 'change_email'
   const subject = change ? 'Confirm your new email address for Rank and File' : 'Your Rank and File sign-in link'
   const lead = change ? 'Confirm this address to use it for your Rank and File account:' : 'Use this link to sign in to Rank and File:'

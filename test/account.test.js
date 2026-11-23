@@ -112,13 +112,36 @@ test('the privacy policy and terms are public, and every page carries the securi
   assert.equal(terms.statusCode, 200)
   assert.match(terms.body, /\$5 a month or \$50 a year/)
 
-  for (const res of [privacy, await app.inject({ url: '/' }), await app.inject({ url: '/api/me' })]) {
+  for (const res of [privacy, await app.inject({ url: '/' }), await app.inject({ url: '/app' }), await app.inject({ url: '/api/me' })]) {
     assert.match(res.headers['content-security-policy'], /default-src 'self'/)
     assert.equal(res.headers['x-frame-options'], 'DENY')
   }
   assert.equal((await app.inject({ url: '/api/me' })).headers['cache-control'], 'no-store')
-  const page = (await app.inject({ url: '/' })).body
+  const page = (await app.inject({ url: '/app' })).body
+  assert.match(page, /<cb-app>/)
   assert.equal(/https?:\/\//.test(page), false, 'the page loads nothing from another site')
+})
+
+test('the marketing site has the root, with a log in link to the app on every page', async () => {
+  const { app } = await testApp({ env: { BASE_URL: 'https://chess.example' } })
+  for (const url of ['/', '/features', '/pricing', '/privacy', '/terms']) {
+    const res = await app.inject({ url })
+    assert.equal(res.statusCode, 200, url)
+    assert.match(res.body, /<a class="btn pri" href="\/app">Log in<\/a>/, `${url} has a log in button`)
+    assert.match(res.body, new RegExp(`<link rel="canonical" href="https://chess.example${url}">`))
+    assert.equal(/(src|<link rel="stylesheet" href)="https?:/.test(res.body), false, `${url} loads nothing from another site`)
+  }
+  for (const url of ['/', '/features', '/pricing']) {
+    const { body } = await app.inject({ url })
+    const data = [...body.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map((m) => JSON.parse(m[1]))
+    const faq = data.find((d) => d['@type'] === 'FAQPage')
+    assert.ok(faq.mainEntity.length >= 5, `${url} has questions and answers`)
+    // Every answer in the data is also on the page for people to read.
+    for (const q of faq.mainEntity) assert.ok(body.includes(`<h3>${q.name.replace(/&/g, '&amp;')}</h3>`), q.name)
+  }
+  assert.match((await app.inject({ url: '/pricing' })).body, /\$5<small> a month<\/small>/)
+  assert.match((await app.inject({ url: '/robots.txt' })).body, /Sitemap: https:\/\/chess\.example\/sitemap\.xml/)
+  assert.match((await app.inject({ url: '/sitemap.xml' })).body, /<loc>https:\/\/chess\.example\/features<\/loc>/)
 })
 
 test('an admin can open the study page of a hidden opening without uncovering it; nobody else can', async () => {
