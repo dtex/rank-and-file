@@ -36,7 +36,7 @@ const cta = (label = 'Start free') => `<a class="btn pri" href="${APP_PATH}">${l
 const software = (config) => ({
   '@context': 'https://schema.org', '@type': 'SoftwareApplication',
   name: SITE_NAME, url: `${config.baseUrl}/`, applicationCategory: 'GameApplication', operatingSystem: 'Web',
-  description: 'Chess opening training that sets opening missions and tracks them against your own chess.com games.',
+  description: 'Chess opening training that sets opening missions and tracks them against your own chess.com and Lichess games.',
   offers: [
     { '@type': 'Offer', name: 'Free', price: '0', priceCurrency: 'USD', description: `${FREE_OPENINGS} openings` },
     { '@type': 'Offer', name: 'Membership, monthly', price: '5.00', priceCurrency: 'USD' },
@@ -46,25 +46,27 @@ const software = (config) => ({
 
 const HOME_FAQ = [
   ['What is Rank and File?',
-    `Rank and File is a web app that teaches chess openings through the games you already play on chess.com. It gives you one opening mission for White and one for Black, counts the games that reach that opening, and uncovers the next opening when a mission is complete.`],
+    `Rank and File is a web app that teaches chess openings through the games you already play on chess.com and Lichess. It gives you one opening mission for White and one for Black, counts the games that reach that opening, and uncovers the next opening when a mission is complete.`],
   ['How does Rank and File work?',
-    `You sign in, enter your chess.com username, and play your normal games. Rank and File reads your finished games from chess.com's public records, counts the ones that reached your mission opening, and scores how closely you followed that opening's ideas. Each completed mission uncovers a new opening on your map.`],
+    `You sign in, enter your username on chess.com, Lichess or both, and play your normal games. Rank and File reads your finished games from those sites' public records, counts the ones that reached your mission opening, and scores how closely you followed that opening's ideas. Each completed mission uncovers a new opening on your map.`],
   ['What is an opening mission?',
     `An opening mission is a goal to reach one named opening position, with one colour, in a set number of your own games. Missions need between ${TARGET_MIN} and ${TARGET_MAX} games: first moves such as 1.e4 need ${TARGET_MAX}, and deep lines that depend on your opponent need fewer. A game counts whether you win, lose or draw.`],
   ['Is Rank and File free?',
     `Yes. A free account includes ${FREE_OPENINGS} openings: the two you start with and four more that you uncover. A membership costs ${PRICE.month} a month or ${PRICE.year} a year and uncovers the rest of the ${OPENINGS} openings on the map.`],
-  ['Do I need a chess.com account to use Rank and File?',
-    `Yes. Rank and File tracks missions against games played on chess.com, so you need a chess.com username with games on it. You never give Rank and File your chess.com password; it reads only the finished games that chess.com publishes for your username.`],
-  ['Does Rank and File work with Lichess?',
-    `No. Rank and File reads games from chess.com only.`],
-  ['Is Rank and File allowed under chess.com fair play rules?',
-    `Rank and File is a study aid for after your games. It reads only finished games and gives no help in a game in progress. Looking at opening advice from any source while a game is being played would break chess.com's fair play rules, so use it between games.`],
+  ['Does Rank and File work with chess.com and Lichess?',
+    `Yes, both. Rank and File reads the finished games that chess.com and Lichess publish for your username on each site. You can follow one site or both at once, and games from both count toward the same missions.`],
+  ['Do I need an account on chess.com or Lichess to use Rank and File?',
+    `Yes, on at least one of them. Rank and File tracks missions against games you play there, so it needs a username with games on it. You never give Rank and File your password to either site; it reads only public game records.`],
+  ['Can I use Rank and File if I play on both chess.com and Lichess?',
+    `Yes. Enter both usernames in Settings and your games from the two sites are combined: they count toward the same missions, the same advice scores and the same choice of next opening. Adding the second site later keeps your progress.`],
+  ['Is Rank and File allowed under chess.com and Lichess fair play rules?',
+    `Rank and File is a study aid for after your games. It reads only finished games and gives no help in a game in progress. Looking at opening advice from any source while a game is being played would break the fair play rules of both sites, so use it between games.`],
   ['Who is Rank and File for?',
     `Rank and File is for beginners and club players who want a sound opening repertoire without memorising long lines of theory. It teaches a few ideas per opening and has you practise them in real games, one opening at a time. You must be 16 or older to have an account.`],
   ['How is Rank and File different from an opening trainer or a course?',
     `Most opening trainers drill moves against a computer. Rank and File has no drills: your own rated games are the practice, and the app measures whether you reached the opening and followed its ideas. You do not choose the next opening either; it is the one your recent games reach most often.`],
-  ['Is Rank and File affiliated with chess.com?',
-    `No. Rank and File is independent and is not affiliated with or endorsed by chess.com. It uses the public game records chess.com makes available.`],
+  ['Is Rank and File affiliated with chess.com or Lichess?',
+    `No. Rank and File is independent and is not affiliated with or endorsed by chess.com or Lichess. It uses the public game records both sites make available.`],
 ]
 
 const FEATURES_FAQ = [
@@ -80,14 +82,14 @@ const FEATURES_FAQ = [
     `Advice accuracy is the percentage of an opening's ideas you followed in one game. Each opening lists a few ideas, such as developing a piece or not bringing the queen out early, and every game that reaches the opening is checked against them move by move. Ideas that did not come up in a game are left out of its score.`],
   ['What is an advice mission?',
     `An advice mission is a short task to follow an opening's ideas more closely. You get one when your last ${ADVICE_WINDOW} scored games in an opening average below your target, which starts at ${THRESHOLD}%. To complete it, average the target or better over ${ADVICE_WINDOW} new games. You can change the target, or switch advice missions off, in Settings.`],
-  ['Which of my chess.com games count toward a mission?',
-    `By default, rated blitz, rapid and daily games count. You can add bullet, drop any time control, or include unrated games in Settings. Chess960 games and games that start from a set position, such as thematic tournaments, never count.`],
+  ['Which of my chess.com and Lichess games count toward a mission?',
+    `By default, rated blitz, rapid and daily games count, from either site. You can add bullet, drop any time control, or include unrated games in Settings. On Lichess, correspondence games count as daily, classical as rapid and ultrabullet as bullet. Chess960 games and games that start from a set position, such as thematic tournaments, never count.`],
   ['Why did one of my games not count?',
     `The game log gives a reason for every game. The usual ones are that your opponent left the line before the opening was reached, that you left it yourself, that the game ended too early, or that its time control is switched off in your settings.`],
   ['Does Rank and File use a chess engine?',
     `No. Rank and File does not run an engine on your games or rate individual moves. It checks whether a game reached an opening position and whether your moves matched that opening's written ideas.`],
   ['What data does Rank and File keep, and can I delete it?',
-    `Rank and File keeps your email address, your chess.com username, the opening moves and results of your finished games, and your progress. It has no passwords, no advertising and no analytics trackers. In Settings you can download everything held about you or delete your account at once.`],
+    `Rank and File keeps your email address, your chess.com and Lichess usernames, the opening moves and results of your finished games, and your progress. It has no passwords, no advertising and no analytics trackers. In Settings you can download everything held about you or delete your account at once.`],
 ]
 
 const PRICING_FAQ = [
@@ -113,7 +115,7 @@ function home(config) {
       <div>
         <div class="caps kicker">Opening training from your own games</div>
         <h1>Learn chess openings in the games you already play</h1>
-        <p class="stand">Rank and File gives you one opening to aim for with each colour, watches your chess.com games, and counts the ones that get there. Finish the mission and the next opening comes out of the fog.</p>
+        <p class="stand">Rank and File gives you one opening to aim for with each colour, watches your chess.com and Lichess games, and counts the ones that get there. Finish the mission and the next opening comes out of the fog.</p>
         <p class="actions">${cta()} <a class="btn" href="/features">See how it works</a></p>
         <p class="fine">Free for your first ${FREE_OPENINGS} openings. No password and no card needed.</p>
       </div>
@@ -126,7 +128,7 @@ function home(config) {
     <section class="section">
       <h2>How it works</h2>
       <ol class="steps">
-        <li><b>i</b><div><h3>Give it your chess.com username</h3><p>Sign in with Google, GitHub or a link sent to your email, then enter your username. Rank and File reads the finished games chess.com publishes for it. It never asks for your chess.com password.</p></div></li>
+        <li><b>i</b><div><h3>Tell it where you play</h3><p>Sign in with Google, GitHub or a link sent to your email, then enter your username on chess.com, Lichess or both. Rank and File reads the finished games those sites publish for it. It never asks for a password to either.</p></div></li>
         <li><b>ii</b><div><h3>Play your normal games</h3><p>You have one mission for White and one for Black. Every game that reaches your mission opening counts, win or lose, and is scored on how well you followed that opening's ideas.</p></div></li>
         <li><b>iii</b><div><h3>Uncover the next opening</h3><p>Complete a mission and a new opening appears on your map: the one your own games reach most often. You always study what you actually face.</p></div></li>
       </ol>
@@ -162,8 +164,8 @@ function home(config) {
     </section>`
   return sitePage({
     config, path: '/',
-    title: `${SITE_NAME}: learn chess openings from your own chess.com games`,
-    description: `${SITE_NAME} sets you one chess opening mission per colour and tracks it against your own chess.com games. Free for your first ${FREE_OPENINGS} openings.`,
+    title: `${SITE_NAME}: learn chess openings from your own chess.com and Lichess games`,
+    description: `${SITE_NAME} sets you one chess opening mission per colour and tracks it against your own chess.com and Lichess games. Free for your first ${FREE_OPENINGS} openings.`,
     body,
     data: [
       { '@context': 'https://schema.org', '@type': 'WebSite', name: SITE_NAME, alternateName: 'Rank & File', url: `${config.baseUrl}/`, description: TAGLINE },
@@ -186,7 +188,7 @@ function features(config) {
       <div>
         <div class="caps kicker">Features</div>
         <h1>Everything Rank and File does</h1>
-        <p class="stand">Opening missions, a map of ${OPENINGS} openings, and a score for how well you followed each opening's ideas, all measured on your own chess.com games.</p>
+        <p class="stand">Opening missions, a map of ${OPENINGS} openings, and a score for how well you followed each opening's ideas, all measured on your own chess.com and Lichess games.</p>
       </div>
     </section>
     ${feature('Missions', 'One opening for White, one for Black',
@@ -211,6 +213,9 @@ function features(config) {
       `<p>Each game is listed with its result and a verdict: counted, your opponent left the line, you left the line, ended early, or not eligible. Where someone left the line, the log shows the move that was played and the move the opening needed.</p>`)}
     ${feature('Your record', 'How each opening is going',
       `<p>An opening's study page shows how often your games reach it, your wins, draws and losses from it, how often you followed each idea, and where your other games went instead.</p>`)}
+    ${feature('Two sites', 'chess.com and Lichess, together',
+      `<p>Give your username on chess.com, on Lichess, or on both. Games from the two sites are combined, so a mission moves forward wherever you happen to play, and the next opening is chosen from all of your games.</p>
+       <p>You can start with one site and add the other later without losing progress. The game log says which site each game came from and links to it there.</p>`)}
     ${feature('Settings', 'Count the games you care about',
       `<p>Choose which time controls count toward missions: bullet, blitz, rapid and daily. Count rated games only, or unrated ones too. Chess960 and games from a set position never count.</p>`)}
     ${feature('Privacy', 'No passwords, no trackers',
@@ -220,7 +225,7 @@ function features(config) {
     ${questions.html}`
   return sitePage({
     config, path: '/features', title: 'Features',
-    description: `Opening missions, a map of ${OPENINGS} chess openings, advice accuracy scores and a game log, all tracked against your own chess.com games.`,
+    description: `Opening missions, a map of ${OPENINGS} chess openings, advice accuracy scores and a game log, all tracked against your own chess.com and Lichess games.`,
     body, data: [questions.data],
   })
 }

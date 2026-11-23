@@ -86,7 +86,7 @@ export function sitePage({ config, path, title, description, body, data = [], in
 </head>
 <body class="site">
   <header class="mast">
-    <div class="dl caps"><span>Opening missions for chess.com players</span><span class="sp"></span><a class="btn pri" href="${APP_PATH}">Log in</a></div>
+    <div class="dl caps"><span>Opening missions for chess.com and Lichess players</span><span class="sp"></span><a class="btn pri" href="${APP_PATH}">Log in</a></div>
     <a class="brand" href="/" aria-label="${SITE_NAME}">Rank <em>&amp;</em> File</a>
     <div class="tagline">${TAGLINE}</div>
     <nav class="tabs caps" aria-label="Site">${NAV.map(([href, name]) => `<a class="tab${href === path ? ' on' : ''}" href="${href}"${href === path ? ' aria-current="page"' : ''}>${name}</a>`).join('')}</nav>
@@ -96,7 +96,7 @@ ${body}
   </main>
   <footer class="foot">
     <nav class="caps" aria-label="Footer">${NAV.map(([href, name]) => `<a href="${href}">${name}</a>`).join('')}<a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="${APP_PATH}">Log in</a></nav>
-    <p>${SITE_NAME} is a study aid for after your games. It is not affiliated with or endorsed by chess.com.</p>
+    <p>${SITE_NAME} is a study aid for after your games. It is not affiliated with or endorsed by chess.com or Lichess.</p>
   </footer>
 </body>
 </html>`

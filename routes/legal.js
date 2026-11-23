@@ -33,7 +33,7 @@ export default async function legalRoutes(app) {
       <tr><th>What</th><th>Why</th><th>Legal basis (GDPR)</th></tr>
       <tr><td>Your email address</td><td>To sign you in, to match your sign-in methods to one account, and to send sign-in links</td><td>Needed to provide the service</td></tr>
       <tr><td>Your account id at Google or GitHub, if you sign in with them</td><td>To recognise you when you sign in again</td><td>Needed to provide the service</td></tr>
-      <tr><td>Your chess.com username, and the finished games chess.com publishes for it (moves of the opening, result, date, time control, and both players’ usernames and ratings)</td><td>To track your opening missions and score your games</td><td>Needed to provide the service</td></tr>
+      <tr><td>Your username on chess.com, on Lichess, or both, and the finished games those sites publish for it (moves of the opening, result, date, time control, and both players’ usernames and ratings)</td><td>To track your opening missions and score your games</td><td>Needed to provide the service</td></tr>
       <tr><td>Your settings, missions and progress</td><td>To run the app for you</td><td>Needed to provide the service</td></tr>
       <tr><td>Whether you asked for news and tips, and a dated record of each time you agreed or withdrew, with the wording you saw</td><td>To send marketing email only to people who asked, and to be able to show that they did</td><td>Your consent; legal obligation to keep proof of it</td></tr>
       <tr><td>A record that you accepted the terms and confirmed your age</td><td>To show that you did</td><td>Legitimate interest</td></tr>
@@ -53,7 +53,7 @@ export default async function legalRoutes(app) {
       <li><b>Google</b>: delivers our email, and signs you in if you choose Google. We ask Google only for your email address.</li>
       <li><b>GitHub</b>: signs you in if you choose GitHub. We ask GitHub only for your email address.</li>
       <li><b>Stripe</b>: takes payment if you subscribe, and receives your email address for receipts.</li>
-      <li><b>chess.com</b>: we ask its public API for the games of the username you give us.</li>
+      <li><b>chess.com</b> and <b>Lichess</b>: we ask each site’s public API for the games of the username you give us for it. A site you give no username for is never contacted about you.</li>
       <li>The company that hosts our server.</li>
     </ul>
     <p><b>We do not sell your personal information, and we do not share it for advertising.</b> There are no advertising or analytics trackers on this site.</p>
@@ -76,7 +76,7 @@ export default async function legalRoutes(app) {
     <p>Wherever you live, you can do the following yourself in Settings, at no cost:</p>
     <ul>
       <li><b>See and take your data</b>: “Download my data” gives you everything we hold on your account as a file.</li>
-      <li><b>Correct it</b>: change your email address or chess.com username.</li>
+      <li><b>Correct it</b>: change your email address or your chess.com and Lichess usernames.</li>
       <li><b>Delete it</b>: “Delete account” removes your account and everything in it at once, ends any membership, and asks Stripe to remove you as a customer.</li>
       <li><b>Withdraw consent</b> to marketing email.</li>
     </ul>
@@ -93,13 +93,13 @@ export default async function legalRoutes(app) {
     <p>These terms are an agreement between you and ${operator} (“we”) for using Rank and File. Contact: ${contact}.</p>
 
     <h2>The service</h2>
-    <p>Rank and File gives you opening missions and tracks them against the finished games chess.com publishes for the username you give us.
-      It is a study aid for after your games. Do not consult it during a game: that would break chess.com’s fair play rules.
-      Rank and File is not affiliated with or endorsed by chess.com.</p>
+    <p>Rank and File gives you opening missions and tracks them against the finished games that chess.com and Lichess publish for the usernames you give us.
+      It is a study aid for after your games. Do not consult it during a game: that would break the fair play rules of both sites.
+      Rank and File is not affiliated with or endorsed by chess.com or Lichess.</p>
 
     <h2>Your account</h2>
     <p>You must be 16 or older. You sign in with Google, GitHub or a link sent to your email; keep access to that email account secure, because it opens your Rank and File account.
-      Give us only a chess.com username that is yours.</p>
+      Give us only usernames that are yours.</p>
 
     <h2>Free use and membership</h2>
     <ul>
@@ -116,10 +116,10 @@ export default async function legalRoutes(app) {
       In its last ${GIFT_RENEW_DAYS} days you can subscribe, and you are not charged until the gift ends.</p>
 
     <h2>Fair use</h2>
-    <p>Do not try to get at other people’s data, disrupt the service, or use it to break chess.com’s rules. We may suspend an account that does.</p>
+    <p>Do not try to get at other people’s data, disrupt the service, or use it to break the rules of chess.com or Lichess. We may suspend an account that does.</p>
 
     <h2>Availability and liability</h2>
-    <p>Rank and File depends on chess.com’s public data and is provided as it is, without a promise that it will always be available or free of mistakes.
+    <p>Rank and File depends on the public data of chess.com and Lichess and is provided as it is, without a promise that it will always be available or free of mistakes.
       To the extent the law allows, our liability to you is limited to what you paid us in the 12 months before the claim. Nothing here limits rights you have as a consumer that cannot be limited.</p>
 
     <h2>Ending</h2>
