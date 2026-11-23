@@ -1,5 +1,5 @@
 import { html, nothing } from 'lit'
-import { View, api } from './lib.js'
+import { THEMES, View, api, getTheme, setTheme } from './lib.js'
 import './plan.js'
 
 const LABEL = { bullet: 'Bullet', blitz: 'Blitz', rapid: 'Rapid', daily: 'Daily' }
@@ -68,6 +68,13 @@ class CbSettings extends View {
               ${this.msg ? html`<span class="muted">${this.msg}</span>` : nothing}
               ${this.error ? html`<span style="color:var(--bad)">${this.error}</span>` : nothing}</div>`}
       </form>
+      <div class="form"><h3>Appearance</h3>
+        <div role="radiogroup" aria-label="Appearance">
+          ${THEMES.map(([id, name]) => html`<label class="check">
+            <input id="set-theme-${id}" type="radio" name="theme" .checked=${getTheme() === id} @change=${() => { setTheme(id); this.requestUpdate() }}> ${name}</label>`)}
+          <p class="muted" style="margin-top:8px">Applies at once, on this device.</p>
+        </div>
+      </div>
       <div class="form"><h3>Membership</h3><cb-plan full .plan=${{ ...this.me?.plan, ...this.data.plan }}></cb-plan></div>
       <cb-account .me=${this.me}></cb-account>
     </div></div>`

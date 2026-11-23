@@ -10,6 +10,28 @@ export class View extends LitElement {
 /** Where the app lives; the marketing site has the root. Keep in step with services/site.js. */
 export const APP_PATH = '/app'
 
+/** Light, dark, or whatever the system says. Kept in this browser, so it also covers the pages outside the app. */
+export const THEMES = [['system', 'Match my system'], ['light', 'Light'], ['dark', 'Dark']]
+
+export function getTheme() {
+  try {
+    const t = localStorage.getItem('rf-theme')
+    return t === 'light' || t === 'dark' ? t : 'system'
+  } catch {
+    return 'system'
+  }
+}
+
+export function setTheme(theme) {
+  if (theme === 'system') delete document.documentElement.dataset.theme
+  else document.documentElement.dataset.theme = theme
+  try {
+    theme === 'system' ? localStorage.removeItem('rf-theme') : localStorage.setItem('rf-theme', theme)
+  } catch {
+    // Storage can be blocked; the choice then lasts until the page is closed.
+  }
+}
+
 /** The name and what it stands for, shown together wherever the app introduces itself. */
 export const TAGLINE = 'Chess training for the rest of us'
 

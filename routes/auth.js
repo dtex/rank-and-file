@@ -103,7 +103,7 @@ export default async function authRoutes(app) {
   // Unsubscribe from marketing email without signing in. The link in an email
   // opens the confirmation page; mail clients' one-click unsubscribe posts directly.
   const page = (body) => `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Rank and File email preferences</title><link rel="stylesheet" href="/app.css">
+<title>Rank and File email preferences</title><script src="/theme.js"></script><link rel="stylesheet" href="/app.css">
 <body><div class="page"><div class="form">${body}<p><a href="/">Rank and File</a> <span class="tagline">Chess training for the rest of us</span></p></div></div></body></html>`
 
   app.get('/unsubscribe', async (req, reply) => {

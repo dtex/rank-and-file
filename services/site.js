@@ -80,6 +80,7 @@ export function sitePage({ config, path, title, description, body, data = [], in
   <meta property="og:description" content="${esc(description)}">
   <meta property="og:url" content="${esc(url)}">
   <meta name="twitter:card" content="summary">
+  <script src="/theme.js"></script>
   <link rel="stylesheet" href="/app.css">
   ${[...data, ...crumbs].map(jsonLd).join('\n  ')}
 </head>

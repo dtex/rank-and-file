@@ -18,14 +18,22 @@
   --text: "Source Serif 4", Georgia, serif;
   --caps: "Libre Franklin", "Helvetica Neue", Arial, sans-serif;
 }
+/* Dark follows the system unless Settings says otherwise (public/theme.js sets data-theme). Keep the two blocks the same. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #141413; --surface: #1B1B19; --surface2: #242421; --ink: #EDEBE4; --muted: #A3A199; --line: #3B3A36;
     --accent: #E58C99; --ok: #7FC59D; --bad: #E58C99;
     --sq-l: #C9D2D8; --sq-d: #6F8794; --pb: #10161C;
     color-scheme: dark;
   }
 }
+:root[data-theme="dark"] {
+    --bg: #141413; --surface: #1B1B19; --surface2: #242421; --ink: #EDEBE4; --muted: #A3A199; --line: #3B3A36;
+    --accent: #E58C99; --ok: #7FC59D; --bad: #E58C99;
+    --sq-l: #C9D2D8; --sq-d: #6F8794; --pb: #10161C;
+    color-scheme: dark;
+}
+:root[data-theme="light"] { color-scheme: light; }
 
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
@@ -205,7 +213,7 @@ figcaption b { font: 700 11px var(--caps); letter-spacing: .14em; text-transform
 .page > div > .form, .page > div > cb-account { margin-inline: 0; }
 .form label { display: block; font-weight: 600; }
 .form input[type=text], .form input[type=number], .form input[type=email] { font: 400 17px var(--text); padding: 8px 10px; border: 1px solid var(--ink); border-radius: 0; background: var(--bg); color: var(--ink); width: 100%; margin-top: 6px; }
-.form input[type=checkbox] { accent-color: var(--ink); width: 16px; height: 16px; }
+.form input[type=checkbox], .form input[type=radio] { accent-color: var(--ink); width: 16px; height: 16px; }
 .form h3 { font: 700 11px/1.3 var(--caps); letter-spacing: .14em; text-transform: uppercase; }
 .form .check { display: flex; gap: 9px; align-items: baseline; font-weight: 400; margin-top: 6px; }
 .form .check input { flex: none; position: relative; top: 2px; }
