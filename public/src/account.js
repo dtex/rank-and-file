@@ -1,6 +1,6 @@
 // Signing in, the consent step, first-time setup, and the account section of Settings.
 import { html, nothing } from 'lit'
-import { APP_PATH, TAGLINE, View, api, wordmark } from './lib.js'
+import { APP_PATH, SITES, TAGLINE, View, api, wordmark } from './lib.js'
 
 const LOGIN_ERRORS = {
   'no-email': 'That account has no verified email address, which Rank and File needs. Verify it there, or use an email link.',
@@ -52,7 +52,7 @@ class CbLogin extends View {
     }
     return gate(html`
       <div><h2>Sign in</h2>
-        <p class="muted" style="margin-top:6px">Opening missions tracked against your chess.com games. There is no password: use an account you already have, or a link sent to your email.</p></div>
+        <p class="muted" style="margin-top:6px">Opening missions tracked against your chess.com and Lichess games. There is no password: use an account you already have, or a link sent to your email.</p></div>
       ${this.problem ? html`<p style="color:var(--bad);margin:0" role="alert">${this.problem}</p>` : nothing}
       ${this.options.providers.length
         ? html`<div class="stack">${this.options.providers.map((p) => html`<a class="btn wide" href="/auth/${p.id}/start">Continue with ${p.name}</a>`)}</div>
@@ -145,9 +145,14 @@ class CbConsent extends View {
 }
 customElements.define('cb-consent', CbConsent)
 
-/** Asks which chess.com account to follow. */
+/** Asks which accounts to follow: chess.com, Lichess or both. */
 class CbWelcome extends View {
   static properties = { error: { state: true }, busy: { state: true } }
+
+  constructor() {
+    super()
+    this.usernames = {}
+  }
 
   async save(e) {
     e.preventDefault()
@@ -156,7 +161,7 @@ class CbWelcome extends View {
     try {
       const { settings, timeClassOptions } = await api('/api/settings')
       const timeClasses = settings.timeClasses.filter((t) => timeClassOptions.includes(t))
-      await api('/api/settings', { method: 'PUT', body: { ...settings, timeClasses, username: this.username } })
+      await api('/api/settings', { method: 'PUT', body: { ...settings, timeClasses, usernames: this.usernames } })
       this.dispatchEvent(new CustomEvent('cb-me', { bubbles: true }))
     } catch (err) {
       this.error = err.message
@@ -167,12 +172,12 @@ class CbWelcome extends View {
 
   render() {
     return gate(html`
-      <div><h2>Which chess.com account is yours?</h2>
-        <p class="muted" style="margin-top:6px">Rank and File reads its finished games from chess.com's public records. It never asks for your chess.com password.</p></div>
+      <div><h2>Where do you play?</h2>
+        <p class="muted" style="margin-top:6px">Rank and File reads your finished games from the public records of chess.com and Lichess. Give your username on one or both; it never asks for a password to either.</p></div>
       <form class="stack" @submit=${(e) => this.save(e)}>
-        <label>chess.com username
-          <input id="welcome-username" type="text" required autocomplete="off" spellcheck="false" @input=${(e) => (this.username = e.target.value.trim())}>
-        </label>
+        ${SITES.map(([id, name]) => html`<label>${name} username
+          <input id="welcome-username-${id}" type="text" autocomplete="off" spellcheck="false" @input=${(e) => (this.usernames[id] = e.target.value.trim())}>
+        </label>`)}
         ${this.error ? html`<p style="color:var(--bad);margin:0" role="alert">${this.error}</p>` : nothing}
         <div><button class="pri" ?disabled=${this.busy}>${this.busy ? 'Saving…' : 'Start'}</button></div>
       </form>`)

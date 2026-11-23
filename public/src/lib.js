@@ -10,6 +10,10 @@ export class View extends LitElement {
 /** Where the app lives; the marketing site has the root. Keep in step with services/site.js. */
 export const APP_PATH = '/app'
 
+/** The sites games are read from, in the order they are listed. Keep in step with services/sites.js. */
+export const SITES = [['chesscom', 'chess.com'], ['lichess', 'Lichess']]
+export const siteName = (id) => SITES.find(([s]) => s === id)?.[1] ?? id
+
 /** Light, dark, or whatever the system says. Kept in this browser, so it also covers the pages outside the app. */
 export const THEMES = [['system', 'Match my system'], ['light', 'Light'], ['dark', 'Dark']]
 

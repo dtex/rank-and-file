@@ -72,7 +72,7 @@ class CbApp extends View {
     }
   }
 
-  /** Signed in, consented and with a chess.com username: the app itself can load. */
+  /** Signed in, consented and with an account to follow: the app itself can load. */
   get ready() {
     return !!this.me && !this.me.needsConsent && !!this.me.username
   }
@@ -113,7 +113,9 @@ class CbApp extends View {
       const r = await api('/api/sync', { method: 'POST' })
       const state = await api('/api/state')
       this.setState(state, this.state ? state.nodes.filter((n) => !before.has(n.id)).map((n) => n.id) : [])
-      if (r.added) {
+      if (r.problem) {
+        this.notice = { err: true, text: `${r.added ? `${r.added} new game${r.added === 1 ? '' : 's'}, but one site could not be read. ` : ''}${r.problem}` }
+      } else if (r.added) {
         this.notice = { text: `${r.added} new game${r.added === 1 ? '' : 's'}, ${r.counted} counted toward a mission.` }
       } else if (!quiet) {
         this.notice = { text: 'No new games since the last sync.' }
@@ -226,7 +228,7 @@ class CbApp extends View {
         <div class="dl caps">
           <span>${new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
           <span class="sp"></span>
-          ${this.state ? html`<span>${this.state.username} · synced ${ago(this.state.lastSync)}</span>` : nothing}
+          ${this.state ? html`<span>${this.state.accounts} · synced ${ago(this.state.lastSync)}</span>` : nothing}
           <button class="link" ?disabled=${this.syncing} @click=${() => this.sync()}>${this.syncing ? 'Checking…' : 'Check for new games'}</button>
         </div>
         ${wordmark('#map')}

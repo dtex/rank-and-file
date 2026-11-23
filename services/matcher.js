@@ -1,6 +1,7 @@
 // Pure functions: given a game and the opening tree, say what the game reached
 // and, when it missed a mission, who left the line and where.
 import { Chess } from 'chess.js'
+import { gameSite, usernamesOf } from './sites.js'
 import { positionKey } from './tree.js'
 
 const keyCache = new Map()
@@ -24,8 +25,10 @@ export function gameKeys(game) {
 }
 
 /** 'w', 'b', or null when the user did not play in this game. */
-export function userSide(game, username) {
-  const u = username.toLowerCase()
+export function userSide(game, settings) {
+  // Matched against the account on the site the game was played on: the same name on the other site is someone else.
+  const u = usernamesOf(settings)[gameSite(game)].toLowerCase()
+  if (!u) return null
   if (game.white.name?.toLowerCase() === u) return 'w'
   if (game.black.name?.toLowerCase() === u) return 'b'
   return null

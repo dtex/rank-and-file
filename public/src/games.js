@@ -1,5 +1,5 @@
 import { html, nothing } from 'lit'
-import { View, accuracy, adviceDetail, api, day, resultWord, sideName, verdict } from './lib.js'
+import { View, accuracy, adviceDetail, api, day, resultWord, sideName, siteName, verdict } from './lib.js'
 
 const FILTERS = [
   ['all', 'All', () => true],
@@ -74,7 +74,7 @@ class CbGames extends View {
               <td class="nw"><a href=${g.url} target="_blank" rel="noopener">${day(g.end)}</a></td>
               <td class="nw">${g.side ? sideName(g.side) : nothing}</td>
               <td class="nw">${g.opponent} <span class="muted">(${g.opponentRating})</span></td>
-              <td class="nw"><span style="text-transform:capitalize">${g.timeClass}</span> <span class="muted">${g.timeControl}</span></td>
+              <td class="nw"><span style="text-transform:capitalize">${g.timeClass}</span> <span class="muted">${g.timeControl} · ${siteName(g.site)}</span></td>
               <td>${resultWord[g.result] ?? ''}</td>
               <td>${!g.opening ? html`<span class="muted">Off the map</span>`
                 : g.opening.hidden ? html`<span class="hid">Undiscovered opening</span>`

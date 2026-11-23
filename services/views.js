@@ -4,6 +4,7 @@
 import { createHash } from 'node:crypto'
 import { FREE_OPENINGS, candidates, isUncovered, uncoveredCount } from './missions.js'
 import { ADVICE_WINDOW, adviceHistory, adviceThreshold, average, gameAdvice, missionRows } from './advice.js'
+import { describeAccounts, gameSite } from './sites.js'
 import { deepestNode, deviation, formatMove, ineligibleReason, reached, userResult, userSide } from './matcher.js'
 
 /** Opaque id for a fog tile, so the real id (which names the opening) is not exposed. */
@@ -33,7 +34,7 @@ function nodeView(node, progress) {
 
 /** Games where the user had this opening's colour and the game was eligible, oldest first. */
 function sideGames(node, games, settings) {
-  return games.filter((g) => userSide(g, settings.username) === node.side && !ineligibleReason(g, settings))
+  return games.filter((g) => userSide(g, settings) === node.side && !ineligibleReason(g, settings))
 }
 
 /** How often recent games of the right colour got to this opening. */
@@ -77,7 +78,7 @@ function adviceMissionView(node, progress, history) {
 }
 
 function gameView(game, tree, progress, adviceFor = null) {
-  const side = userSide(game, progress.settings.username)
+  const side = userSide(game, progress.settings)
   const opp = side === 'w' ? game.black : game.white
   const deepest = game.moves.length ? deepestNode(tree, game) : null
   const v = game.verdict ?? { type: 'pending' }
@@ -88,6 +89,7 @@ function gameView(game, tree, progress, adviceFor = null) {
     side,
     opponent: opp.name,
     opponentRating: opp.rating,
+    site: gameSite(game),
     timeClass: game.timeClass,
     timeControl: formatTimeControl(game),
     result: side ? userResult(game, side) : null,
@@ -175,7 +177,7 @@ export function stateView(tree, progress, games, plan = { subscribed: true, sour
 
   const recent = games.filter((g) => g.verdict && g.verdict.type !== 'history').slice(-5).reverse()
   return {
-    username: progress.settings.username,
+    accounts: describeAccounts(progress.settings),
     adviceThreshold: adviceThreshold(progress.settings),
     lastSync: progress.lastSync,
     plan: planView(plan, progress),

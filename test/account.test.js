@@ -48,7 +48,7 @@ test('download my data returns the account, consents, progress and games of that
   assert.match(res.headers['content-disposition'], /attachment/)
   const data = res.json()
   assert.equal(data.account.email, c.email)
-  assert.equal(data.progress.settings.username, 'exporter')
+  assert.equal(data.progress.settings.usernames.chesscom, 'exporter')
   assert.deepEqual(data.games.map((g) => g.uuid), ['x1'])
   assert.equal(data.consents.length, 3)
   assert.deepEqual(data.signInMethods.map((m) => m.provider), ['email'])

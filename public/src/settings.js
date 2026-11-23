@@ -1,5 +1,5 @@
 import { html, nothing } from 'lit'
-import { THEMES, View, api, getTheme, setTheme } from './lib.js'
+import { SITES, THEMES, View, api, getTheme, setTheme } from './lib.js'
 import './plan.js'
 
 const LABEL = { bullet: 'Bullet', blitz: 'Blitz', rapid: 'Rapid', daily: 'Daily' }
@@ -16,12 +16,18 @@ class CbSettings extends View {
   async save(reset = false) {
     this.msg = this.error = ''
     try {
+      const had = Object.values(this.data.settings.usernames).filter(Boolean).length
       const res = await api('/api/settings', { method: 'PUT', body: { ...this.form, reset } })
+      // A site that was just added has games to fetch.
+      const addedSite = Object.values(res.settings.usernames).filter(Boolean).length > had
       this.data = { ...this.data, settings: res.settings }
       this.confirmReset = false
-      this.msg = reset ? 'Started over. Syncing games for the new username.' : 'Saved. The change applies to games synced from now on.'
-      this.dispatchEvent(new CustomEvent('cb-reload', { detail: { sync: reset }, bubbles: true }))
-      if (reset) this.dispatchEvent(new CustomEvent('cb-me', { bubbles: true }))
+      this.form = structuredClone(res.settings)
+      this.msg = reset ? 'Started over. Syncing games for your accounts.'
+        : addedSite ? 'Saved. Fetching games from the account you added; a long history can take a minute.'
+        : 'Saved. The change applies to games synced from now on.'
+      this.dispatchEvent(new CustomEvent('cb-reload', { detail: { sync: reset || addedSite }, bubbles: true }))
+      if (reset || addedSite) this.dispatchEvent(new CustomEvent('cb-me', { bubbles: true }))
     } catch (err) {
       if (err.data?.needsReset) this.confirmReset = true
       else this.error = err.message
@@ -40,10 +46,15 @@ class CbSettings extends View {
     return html`<div class="page"><div>
       <h2>Settings</h2>
       <form class="form" @submit=${(e) => { e.preventDefault(); this.save() }}>
-        <label>chess.com username
-          <input id="set-username" type="text" .value=${f.username} autocomplete="off" spellcheck="false"
-            @input=${(e) => (f.username = e.target.value.trim())}>
-        </label>
+        <div>
+          <label>Your accounts</label>
+          <p class="muted" style="margin:4px 0 0">Games from both sites count toward the same missions. Fill in one or both.</p>
+          ${SITES.map(([id, name]) => html`<label style="margin-top:12px">${name} username
+            <input id="set-username-${id}" type="text" .value=${f.usernames[id]} autocomplete="off" spellcheck="false"
+              @input=${(e) => (f.usernames[id] = e.target.value.trim())}>
+          </label>`)}
+          <p class="muted" style="margin-top:8px">Adding a site keeps your progress. Changing or removing a username starts over.</p>
+        </div>
         <div>
           <label>Games that count toward missions</label>
           ${this.data.timeClassOptions.map((tc) => html`<label class="check">
@@ -60,9 +71,9 @@ class CbSettings extends View {
         </label>
         ${this.confirmReset
           ? html`<div class="mcard ask" style="margin:0">
-              <p>Changing the username deletes the stored games and all mission progress, then starts again as <b>${f.username}</b>.</p>
-              <div class="row"><button type="button" class="pri" @click=${() => this.save(true)}>Start over as ${f.username}</button>
-              <button type="button" @click=${() => { this.confirmReset = false; f.username = this.data.settings.username; this.requestUpdate() }}>Cancel</button></div>
+              <p>Changing or removing a username deletes the stored games and all mission progress, then starts again with the accounts above.</p>
+              <div class="row"><button type="button" class="pri" @click=${() => this.save(true)}>Start over</button>
+              <button type="button" @click=${() => { this.confirmReset = false; f.usernames = { ...this.data.settings.usernames }; this.requestUpdate() }}>Cancel</button></div>
             </div>`
           : html`<div class="row"><button class="pri">Save settings</button>
               ${this.msg ? html`<span class="muted">${this.msg}</span>` : nothing}

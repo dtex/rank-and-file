@@ -57,12 +57,11 @@ function activate(progress, node, since) {
 export function nextOpening(tree, progress, side, games = [], until = Infinity) {
   const open = candidates(tree, progress, side).filter((n) => !progress.missions[n.id])
   if (open.length < 2) return open[0] ?? null
-  const { username } = progress.settings
   const recent = games
-    .filter((g) => g.end <= until && userSide(g, username))
+    .filter((g) => g.end <= until && userSide(g, progress.settings))
     .sort((a, b) => a.end - b.end)
     .slice(-RANK_WINDOW)
-    .filter((g) => userSide(g, username) === side)
+    .filter((g) => userSide(g, progress.settings) === side)
   let best = open[0]
   let most = 0
   for (const n of open) {
@@ -100,9 +99,9 @@ export function processGames(tree, progress, games, limit = Infinity) {
 
   for (const game of pending) {
     judged.push(game)
-    const side = userSide(game, settings.username)
+    const side = userSide(game, settings)
     if (!side) {
-      game.verdict = { type: 'not_eligible', reason: `${settings.username} did not play in this game` }
+      game.verdict = { type: 'not_eligible', reason: 'you did not play in this game' }
       continue
     }
     if (game.end <= progress.createdAt) {
