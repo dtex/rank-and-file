@@ -2,6 +2,8 @@ import { html, nothing, svg } from 'lit'
 import './plan.js'
 import { View, accuracy, api, board, pips, resultVerb, sideName, tile, verdict } from './lib.js'
 
+/** How long a zoom from the buttons takes; matches .canvas.glide in app.css. */
+const GLIDE_MS = 280
 const W = 150
 const H = 200
 const FOG_H = 34
@@ -99,6 +101,21 @@ class CbMap extends View {
     this.view = { k, x: place(width, vw, cx, pad, pad), y: place(height, vh, cy, top, pad) }
   }
 
+  /** Let the next change of view glide. Only the buttons use it: dragging and the wheel already move in small steps. */
+  glide() {
+    const canvas = this.querySelector('.canvas')
+    if (!canvas) return
+    canvas.classList.add('glide')
+    clearTimeout(this.gliding)
+    this.gliding = setTimeout(() => canvas.classList.remove('glide'), GLIDE_MS + 50)
+  }
+
+  /** Stop a glide the moment the user takes hold of the map. */
+  settle() {
+    clearTimeout(this.gliding)
+    this.querySelector('.canvas')?.classList.remove('glide')
+  }
+
   zoom(factor, cx, cy) {
     const vp = this.querySelector('.viewport')
     const v = this.view ?? { k: 1, x: 0, y: 0 }
@@ -110,6 +127,7 @@ class CbMap extends View {
 
   onWheel(e) {
     e.preventDefault()
+    this.settle()
     const rect = e.currentTarget.getBoundingClientRect()
     if (e.ctrlKey || e.metaKey) this.zoom(Math.exp(-e.deltaY * 0.01), e.clientX - rect.left, e.clientY - rect.top)
     else this.view = { ...this.view, x: this.view.x - e.deltaX, y: this.view.y - e.deltaY }
@@ -117,6 +135,7 @@ class CbMap extends View {
 
   onDown(e) {
     if (e.button !== 0) return
+    this.settle()
     this.drag = { x: e.clientX, y: e.clientY, vx: this.view.x, vy: this.view.y, moved: false }
   }
 
@@ -222,9 +241,9 @@ class CbMap extends View {
       <div class="viewport" @pointerdown=${this.onDown} @pointermove=${this.onMove} @pointerup=${this.onUp}
         @pointercancel=${this.onUp} @click=${{ handleEvent: (e) => this.onClickCapture(e), capture: true }}>
         <div class="tools" @pointerdown=${(e) => e.stopPropagation()}>
-          <button @click=${() => this.fit()}>Fit</button>
-          <button aria-label="Zoom in" @click=${() => this.zoom(1.25)}>+</button>
-          <button aria-label="Zoom out" @click=${() => this.zoom(0.8)}>−</button>
+          <button @click=${() => { this.glide(); this.fit() }}>Fit</button>
+          <button aria-label="Zoom in" @click=${() => { this.glide(); this.zoom(1.25) }}>+</button>
+          <button aria-label="Zoom out" @click=${() => { this.glide(); this.zoom(0.8) }}>−</button>
         </div>
         <div class="canvas" style="width:${width}px;height:${height}px;transform:translate(${v.x}px,${v.y}px) scale(${v.k})">
           <svg width=${width} height=${height} aria-hidden="true">${edges.map(({ from, to }) => {
