@@ -52,7 +52,7 @@ const HOME_FAQ = [
   ['What is an opening mission?',
     `An opening mission is a goal to reach one named opening position, with one colour, in a set number of your own games. Missions need between ${TARGET_MIN} and ${TARGET_MAX} games: first moves such as 1.e4 need ${TARGET_MAX}, and deep lines that depend on your opponent need fewer. A game counts whether you win, lose or draw.`],
   ['Is Rank and File free?',
-    `Yes. A free account includes ${FREE_OPENINGS} openings: the two you start with and four more that you uncover. A membership costs ${PRICE.month} a month or ${PRICE.year} a year and uncovers the rest of the ${OPENINGS} openings on the map.`],
+    `Yes. A free account includes ${FREE_OPENINGS} openings: the two you start with and two more that you uncover. A membership costs ${PRICE.month} a month or ${PRICE.year} a year and uncovers the rest of the ${OPENINGS} openings on the map.`],
   ['Does Rank and File work with chess.com and Lichess?',
     `Yes, both. Rank and File reads the finished games that chess.com and Lichess publish for your username on each site. You can follow one site or both at once, and games from both count toward the same missions.`],
   ['Do I need an account on chess.com or Lichess to use Rank and File?',
@@ -96,7 +96,7 @@ const PRICING_FAQ = [
   ['How much does Rank and File cost?',
     `Rank and File is free for your first ${FREE_OPENINGS} openings. A membership costs ${PRICE.month} a month or ${PRICE.year} a year and opens all ${OPENINGS} openings on the map.`],
   ['What do I get for free?',
-    `A free account has every feature of the app: missions, the map, advice accuracy, advice missions and the game log. The only limit is the number of openings: the two you start with and four more.`],
+    `A free account has every feature of the app: missions, the map, advice accuracy, advice missions and the game log. The only limit is the number of openings: the two you start with and two more.`],
   ['Can I cancel my membership?',
     `Yes, at any time, under Settings and then Manage billing. You keep your membership until the end of the period you paid for, and it does not renew after that.`],
   ['What happens to my progress if my membership ends?',
@@ -246,7 +246,7 @@ function pricing(config, onSale) {
         <p class="pull">$0</p>
         <p>${FREE_OPENINGS} openings, for as long as you like.</p>
         <ul>
-          <li>The two openings you start with, and four more</li>
+          <li>The two openings you start with, and two more</li>
           <li>Opening missions for White and Black</li>
           <li>Advice accuracy and advice missions</li>
           <li>The full game log</li>

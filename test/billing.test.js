@@ -174,14 +174,14 @@ test('a gifted member can subscribe in the last 30 days, with the first charge w
   assert.equal('trial_end' in ctx.stripe.calls.checkout.at(-1).subscription_data, false)
 })
 
-test('when a membership ends, openings past the first six lock, and return on resubscribing', async () => {
+test('when a membership ends, openings past the first four lock, and return on resubscribing', async () => {
   const ctx = await setup()
   const c = await signIn(ctx)
   const sub = subscription(c.userId)
   ctx.stripe.subs.set(sub.id, sub)
   await webhook(ctx.app, 'customer.subscription.created', sub)
 
-  // As a member, uncover a seventh opening through the API.
+  // As a member, uncover a fifth opening through the API.
   const store = ctx.app.ctx.store.forUser(c.userId)
   for (let i = 0; i < 5; i++) {
     const state = (await c.get('/api/state')).json()
@@ -192,13 +192,13 @@ test('when a membership ends, openings past the first six lock, and return on re
     await c.get('/api/state') // fills both empty slots with new openings
   }
   const member = (await c.get('/api/state')).json()
-  assert.ok(member.plan.uncovered > 6, `uncovered ${member.plan.uncovered}`)
+  assert.ok(member.plan.uncovered > 4, `uncovered ${member.plan.uncovered}`)
 
   sub.status = 'canceled'
   await webhook(ctx.app, 'customer.subscription.deleted', sub)
   const lapsed = (await c.get('/api/state')).json()
-  assert.deepEqual([lapsed.plan.subscribed, lapsed.plan.uncovered, lapsed.plan.locked], [false, 6, member.plan.uncovered - 6])
-  assert.equal(lapsed.nodes.length - 1, 6)
+  assert.deepEqual([lapsed.plan.subscribed, lapsed.plan.uncovered, lapsed.plan.locked], [false, 4, member.plan.uncovered - 4])
+  assert.equal(lapsed.nodes.length - 1, 4)
 
   const again = subscription(c.userId, { customer: sub.customer })
   ctx.stripe.subs.set(again.id, again)

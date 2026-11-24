@@ -103,7 +103,7 @@ export default async function legalRoutes(app) {
 
     <h2>Free use and membership</h2>
     <ul>
-      <li>You can uncover ${FREE_OPENINGS} openings for free: the two you start with and four more.</li>
+      <li>You can uncover ${FREE_OPENINGS} openings for free: the two you start with and two more.</li>
       <li>Membership uncovers the rest. It costs $5 a month or $50 a year, charged in advance through Stripe, and renews automatically until you cancel.</li>
       <li>You can cancel at any time under Settings, Manage billing. You keep membership until the end of the period you paid for.</li>
       <li>When a membership ends, openings beyond your first ${FREE_OPENINGS} are locked. Their progress is kept and returns if you subscribe again. Games played while an opening is locked do not count toward it.</li>

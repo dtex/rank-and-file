@@ -3,8 +3,8 @@
 // the hidden opening their games reach most (see nextOpening). All functions mutate the `progress` object passed in.
 import { judge, reached, userSide } from './matcher.js'
 
-/** Openings a user may have uncovered without a membership: the two starting ones and four more. */
-export const FREE_OPENINGS = 6
+/** Openings a user may have uncovered without a membership: the two starting ones and two more. */
+export const FREE_OPENINGS = 4
 
 /** How many of the user's latest games decide which opening comes out of the fog next. */
 export const RANK_WINDOW = 1000
@@ -193,7 +193,7 @@ export function applyEntitlement(tree, progress, subscribed, now) {
     return changed
   }
 
-  // A parent is always uncovered before its children, so the first six are a connected piece of the map.
+  // A parent is always uncovered before its children, so the first four are a connected piece of the map.
   const free = new Set([...entries].sort((a, b) => a[1].startedAt - b[1].startedAt).slice(0, FREE_OPENINGS).map(([id]) => id))
   for (const [id, m] of entries) {
     if (free.has(id) || m.status === 'locked') continue

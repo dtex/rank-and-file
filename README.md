@@ -81,9 +81,9 @@ about them, and delete their account.
 
 ## Free use, membership and gifts
 
-A free account keeps the two starting openings and can uncover four more. Membership
+A free account keeps the two starting openings and can uncover two more. Membership
 ($5 a month or $50 a year, through Stripe) uncovers the rest. When a membership ends, openings
-past the first six are locked with their progress kept, and come back on resubscribing.
+past the first four are locked with their progress kept, and come back on resubscribing.
 
 Stripe setup, once:
 
