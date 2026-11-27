@@ -159,3 +159,4 @@ vite.config.ts.timestamp-*
 # rank-and-file
 public/dist
 *.tmp
+comps/.DS_Store
