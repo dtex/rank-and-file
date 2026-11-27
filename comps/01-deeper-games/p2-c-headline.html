@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phase 2 · The headline figure</title>
+<link rel="stylesheet" href="../../public/app.css">
+<link rel="stylesheet" href="kit.css">
+</head>
+<body>
+<div id="top" class="comp" style="padding-bottom:0"></div>
+<main class="comp" style="padding-top:0">
+  <h1>C · The headline figure</h1>
+  <p class="stand">The score against stronger players is set as large as the reach figure above it. The three bands appear as bars underneath.</p>
+  <div class="needs">
+    <span class="caps">How it fits</span>
+    <ul>
+      <li>It uses patterns the box already has: a large figure with a sentence under it, and bars like <i>Where the other 75 went</i>.</li>
+      <li>The bars show score only. Won, Drawn and Lost for each band move to the tooltip, so the box gets less detail than A or B.</li>
+      <li>Two large figures in one box compete for attention. The red one wins, which is the point, but only when the player is struggling.</li>
+    </ul>
+  </div>
+  <div id="frames"></div>
+</main>
+<script src="kit.js"></script>
+<script>
+const { JUST, opening, openings, frame } = Kit
+const pct = (g, w, d) => Math.round(((w + d / 2) / g) * 100)
+const block = (rows, bad) => {
+  const [, sg, sw, sd] = rows[2]
+  return `<h4><span class="new">Against stronger players</span></h4>
+  <div class="new"><p class="pull ${bad ? 'bad' : ''}">${pct(sg, sw, sd)}%</p>
+  <p>of the points in your ${sg} games here against players rated 100 or more above you.</p>
+  ${rows.map(([name, g, w, d, l]) => `<div class="band-row ${bad && name === 'Stronger' ? 'bad' : ''}" title="${w} won, ${d} drawn, ${l} lost">
+    <span>${name}<small>${g} games</small></span><span class="meter"><s style="width:${pct(g, w, d)}%"></s></span><span>${pct(g, w, d)}%</span></div>`).join('')}
+  <p class="trend">Your last 20 games here scored <b class="${bad ? 'down' : ''}">${bad ? 41 : 52}%</b>, ${bad ? 'down from 58%' : 'up from 47%'} in the 20 before.</p></div>`
+}
+document.getElementById('frames').innerHTML = [
+  frame(1, 'An opening where the player is struggling',
+    opening({ mast: JUST, inBox: block([['Weaker', 14, 10, 1, 3], ['Your level', 22, 11, 2, 9], ['Stronger', 9, 2, 0, 7]], true) }),
+    '<b>22% in red, as large as the 38% above it.</b> It is the most direct of the three, and the one that best sets up the middlegame work.', 1320),
+  frame(2, 'An opening where the player is doing fine',
+    opening({ mast: JUST, inBox: block([['Weaker', 14, 9, 1, 4], ['Your level', 22, 10, 2, 10], ['Stronger', 9, 4, 0, 5]], false) }),
+    'The figure is in ink, and the box is just as loud. Any opening with games against stronger players gets the second large figure, which repeats on every opening page.', 1320),
+  frame(3, 'The outline',
+    openings({ mast: JUST, marks: { sicilian: '<span class="ring new" title="Struggling against stronger players: 22% in 9 games">↑</span>' } }),
+    '<b>The marker is a ringed arrow</b> in the same place and size as the <i>!</i> flag for an advice mission. It is the smallest marker, but it needs the tooltip to explain it, and two red circles side by side are easy to confuse.', 560),
+].join('')
+Kit.mount('p2-c-headline.html')
+</script>
+</body>
+</html>

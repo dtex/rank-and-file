@@ -41,10 +41,14 @@ export function boardHtml(moves, { flip = false, label = 'Chess position' } = {}
 /** Mission progress as the app's row of dots. */
 export const pipsHtml = (n, of) => `<span class="pips" role="img" aria-label="${n} of ${of} games">${Array.from({ length: of }, (_, i) => `<i${i < n ? ' class="on"' : ''}></i>`).join('')}</span>`
 
-/** Questions and answers as visible text plus the matching FAQPage data. Answers are plain text. */
+/**
+ * Questions and answers as an accordion plus the matching FAQPage data. Answers are plain
+ * text. Each question is a native <details>, so it opens without script and a closed answer
+ * is still in the page for search engines and find-in-page.
+ */
 export function faq(title, items) {
   return {
-    html: `<section class="section faq" id="faq"><h2>${esc(title)}</h2>${items.map(([q, a]) => `<div class="qa"><h3>${esc(q)}</h3><p>${esc(a)}</p></div>`).join('')}</section>`,
+    html: `<section class="section faq" id="faq"><h2>${esc(title)}</h2>${items.map(([q, a]) => `<details class="qa"><summary><h3>${esc(q)}</h3></summary><p>${esc(a)}</p></details>`).join('')}</section>`,
     data: {
       '@context': 'https://schema.org', '@type': 'FAQPage',
       mainEntity: items.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })),

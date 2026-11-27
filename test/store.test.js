@@ -21,9 +21,10 @@ test('a new user starts with empty progress, and saved progress comes back', asy
 test('games are stored once, oldest first, and keep their verdicts', async () => {
   const { store } = await testStore()
   const first = await store.saveMonth('2026-10', [game('b', 200), game('a', 100)], 'etag-1')
-  assert.deepEqual(first.map((g) => g.uuid), ['b', 'a'])
+  assert.deepEqual(first.added.map((g) => g.uuid), ['b', 'a'])
   const again = await store.saveMonth('2026-10', [game('a', 100), game('c', 300, { verdict: { type: 'history' } })], 'etag-2')
-  assert.deepEqual(again.map((g) => g.uuid), ['c'])
+  assert.deepEqual(again.added.map((g) => g.uuid), ['c'])
+  assert.equal(again.lengthened, 0)
   assert.deepEqual(await store.loadMonths(), { '2026-10': 'etag-2' })
 
   const all = await store.loadAllGames()
@@ -34,6 +35,26 @@ test('games are stored once, oldest first, and keep their verdicts', async () =>
   all[0].verdict = { type: 'counted', node: 'kp' }
   await store.saveVerdicts([all[0]])
   assert.deepEqual((await store.loadAllGames())[0].verdict, { type: 'counted', node: 'kp' })
+})
+
+test('a longer copy of a stored game replaces it and keeps the verdict; a shorter or equal one changes nothing', async () => {
+  const { store } = await testStore()
+  const moves = (n) => Array.from({ length: n }, (_, i) => `m${i}`)
+  await store.saveGames([game('a', 100, { moves: moves(30), verdict: { type: 'history' } })])
+
+  const longer = await store.saveGames([game('a', 100, { moves: moves(60) }), game('b', 200)])
+  assert.deepEqual(longer.added.map((g) => g.uuid), ['b'], 'added holds only the new game')
+  assert.equal(longer.lengthened, 1)
+  let [a] = await store.loadAllGames()
+  assert.equal(a.moves.length, 60)
+  assert.deepEqual(a.verdict, { type: 'history' })
+
+  const same = await store.saveGames([game('a', 100, { moves: moves(60), timeControl: 'changed' })])
+  const shorter = await store.saveMonth('2026-10', [game('a', 100, { moves: moves(12), timeControl: 'changed' })], 'e')
+  assert.deepEqual([same, shorter], [{ added: [], lengthened: 0 }, { added: [], lengthened: 0 }])
+  ;[a] = await store.loadAllGames()
+  assert.equal(a.moves.length, 60)
+  assert.equal(a.timeControl, '300')
 })
 
 test('one user never sees or resets another user\'s data', async () => {

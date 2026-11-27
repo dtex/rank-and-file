@@ -1,13 +1,10 @@
 // Mission state: which openings are uncovered, which two are active, and what
 // happens when a game counts. Nobody chooses what is uncovered next: it is always
-// the hidden opening their games reach most (see nextOpening). All functions mutate the `progress` object passed in.
-import { judge, reached, userSide } from './matcher.js'
+// the hidden opening most popular on chess.com (see nextOpening). All functions mutate the `progress` object passed in.
+import { judge, userSide } from './matcher.js'
 
-/** Openings a user may have uncovered without a membership: the two starting ones and four more. */
-export const FREE_OPENINGS = 6
-
-/** How many of the user's latest games decide which opening comes out of the fog next. */
-export const RANK_WINDOW = 1000
+/** Openings a user may have uncovered without a membership: the two starting ones and two more. */
+export const FREE_OPENINGS = 4
 
 /** Locked missions (see applyEntitlement) are back under the fog: kept, but not shown or played. */
 export const isUncovered = (progress, id) => {
@@ -50,36 +47,26 @@ function activate(progress, node, since) {
 }
 
 /**
- * The hidden opening the user already plays most: the one reached, with its
- * colour, by the most of their last RANK_WINDOW games up to `until`. Ties, and
- * a user with no games yet, fall back to map order, main lines first.
+ * The hidden opening for `side` that is most popular on chess.com: of the fog
+ * tiles, the one the most sampled chess.com games reached (node.popularity, see
+ * tree.js). Ties, and a map with no figures, fall back to map order, main lines first.
  */
-export function nextOpening(tree, progress, side, games = [], until = Infinity) {
+export function nextOpening(tree, progress, side) {
   const open = candidates(tree, progress, side).filter((n) => !progress.missions[n.id])
-  if (open.length < 2) return open[0] ?? null
-  const recent = games
-    .filter((g) => g.end <= until && userSide(g, progress.settings))
-    .sort((a, b) => a.end - b.end)
-    .slice(-RANK_WINDOW)
-    .filter((g) => userSide(g, progress.settings) === side)
-  let best = open[0]
-  let most = 0
-  for (const n of open) {
-    const count = recent.filter((g) => reached(n, g)).length
-    if (count > most) [best, most] = [n, count]
-  }
+  let best = open[0] ?? null
+  for (const n of open) if (n.popularity > best.popularity) best = n
   return best
 }
 
 /**
- * Give each empty slot the opening the user's games reach most (see nextOpening),
+ * Give each empty slot the hidden opening most popular on chess.com (see nextOpening),
  * while `limit` allows another to be uncovered. Returns the openings that were uncovered.
  */
-export function fillSlots(tree, progress, since, limit = Infinity, games = []) {
+export function fillSlots(tree, progress, since, limit = Infinity) {
   const started = []
   for (const side of ['w', 'b']) {
     if (progress.slots[side] || !canUncover(progress, limit)) continue
-    const next = nextOpening(tree, progress, side, games, since)
+    const next = nextOpening(tree, progress, side)
     if (!next) continue
     activate(progress, next, since)
     started.push(next)
@@ -125,7 +112,7 @@ export function processGames(tree, progress, games, limit = Infinity) {
         mission.completedAt = game.end
         progress.slots[side] = null
         // The next mission starts from this game's end, so games later in the same sync can count for it.
-        const [next] = fillSlots(tree, progress, game.end, limit, games)
+        const [next] = fillSlots(tree, progress, game.end, limit)
         const event = { id: `${id}-${game.end}`, type: 'completed', node: id, next: next?.id ?? null, at: game.end, seen: false }
         // More to uncover, but the free openings are used up.
         if (!next && !canUncover(progress, limit) && candidates(tree, progress, side).length) event.paywall = true
@@ -193,7 +180,7 @@ export function applyEntitlement(tree, progress, subscribed, now) {
     return changed
   }
 
-  // A parent is always uncovered before its children, so the first six are a connected piece of the map.
+  // A parent is always uncovered before its children, so the first four are a connected piece of the map.
   const free = new Set([...entries].sort((a, b) => a[1].startedAt - b[1].startedAt).slice(0, FREE_OPENINGS).map(([id]) => id))
   for (const [id, m] of entries) {
     if (free.has(id) || m.status === 'locked') continue

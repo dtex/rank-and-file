@@ -1,6 +1,6 @@
+// The openings as a map: a tree of diagrams to drag and zoom. One of the two layouts of the Openings screen (openings.js).
 import { html, nothing, svg } from 'lit'
-import './plan.js'
-import { View, accuracy, api, board, pips, resultVerb, sideName, tile, verdict } from './lib.js'
+import { View, board, sideName, tile } from './lib.js'
 
 /** How long a zoom from the buttons takes; matches .canvas.glide in app.css. */
 const GLIDE_MS = 280
@@ -12,13 +12,32 @@ const GAP_Y = 12
 /** The diagram inside a tile, which the connecting lines run between. */
 const BOARD = 104
 const BOARD_MID = 58
+/** Half the width a skipped-move marker keeps clear of the connecting lines. */
+const VIA_HALF = 24
+
+/** A closed-off book: a move that is played on the way but is not an opening of its own. */
+const NOT_BOOK = html`<svg viewBox="0 0 28 28" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+  <path d="M14 7C11 5 7 5 3 6.5V22c4-1.5 8-1.5 11 .5 3-2 7-2 11-.5V6.5C21 5 17 5 14 7zM14 7v15.5" />
+  <path d="M5 25.5 23 2.5" stroke="var(--bg)" stroke-width="4.5" /><path d="M5 25.5 23 2.5" />
+</svg>`
 
 /** Left-to-right tree: each parent is centred on its children. */
 function layout(state) {
   const items = new Map()
   for (const n of state.nodes) items.set(n.id, { id: n.id, node: n, h: H, kids: [] })
-  for (const n of state.nodes) if (n.parent) items.get(n.parent)?.kids.push(items.get(n.id))
-  for (const f of state.fog) items.get(f.parent)?.kids.push({ id: `fog-${f.fid}`, fog: f, h: FOG_H, kids: [] })
+  for (const n of state.nodes) {
+    if (!n.parent) continue
+    // A move on the way that is no opening of its own gets a marker in its own column, so each column is one turn.
+    let kid = items.get(n.id)
+    for (const move of [...(n.via ?? [])].reverse()) kid = { id: `via-${n.id}-${move}`, via: move, h: H, kids: [kid] }
+    items.get(n.parent)?.kids.push(kid)
+  }
+  for (const f of state.fog) {
+    // Under the fog the skipped moves stay unnamed, but still hold their columns.
+    let kid = { id: `fog-${f.fid}`, fog: f, h: FOG_H, kids: [] }
+    for (let i = f.skip ?? 0; i > 0; i--) kid = { id: `via-${f.fid}-${i}`, via: true, faint: true, h: FOG_H, kids: [kid] }
+    items.get(f.parent)?.kids.push(kid)
+  }
 
   const root = items.get('start')
   const measure = (it) => {
@@ -55,8 +74,6 @@ class CbMap extends View {
     state: { attribute: false },
     fresh: { attribute: false },
     view: { state: true },
-    error: { state: true },
-    busy: { state: true },
   }
 
   constructor() {
@@ -170,21 +187,6 @@ class CbMap extends View {
     }
   }
 
-  async switchTo(body) {
-    this.busy = true
-    this.error = ''
-    try {
-      const before = new Set(this.state.nodes.map((n) => n.id))
-      const state = await api('/api/missions/switch', { method: 'POST', body })
-      const fresh = state.nodes.filter((n) => !before.has(n.id)).map((n) => n.id)
-      this.dispatchEvent(new CustomEvent('cb-state', { detail: { state, fresh }, bubbles: true }))
-    } catch (err) {
-      this.error = err.message
-    } finally {
-      this.busy = false
-    }
-  }
-
   renderNode(it) {
     const style = `left:${it.x}px;top:${it.y}px`
     if (it.fog) {
@@ -192,45 +194,13 @@ class CbMap extends View {
       const label = html`<b class=${f.side}>?</b>${sideName(f.side)} line, unexplored`
       // Only an admin's tiles carry an id: they open the study page without uncovering anything.
       if (f.id) return html`<a class="fogn" style=${style} href="#opening-${f.id}" draggable="false" title="View this hidden opening's page">${label}</a>`
-      return html`<div class="fogn" style=${style} title="Finishing a mission uncovers the hidden opening your games reach most.">${label}</div>`
+      return html`<div class="fogn" style=${style} title="Finishing a mission uncovers the hidden opening that is most popular on chess.com.">${label}</div>`
     }
+    if (it.faint) return html`<div class="via faint" style=${style} title="A move played on the way. It is not an opening of its own here.">${NOT_BOOK}</div>`
+    if (it.via) return html`<div class="via" style=${style} title="${it.via} is played on the way. It is not an opening of its own here.">${NOT_BOOK}<span class="mvn">${it.via}</span></div>`
     const n = it.node
     if (n.status === 'start') return html`<div class="node start" style=${style}>${board(n.fen)}<span class="nm">The starting position</span></div>`
     return tile(n, { fresh: this.fresh?.has(n.id), style })
-  }
-
-  renderMission(side) {
-    const { active, parked } = this.state.missions[side]
-    return html`
-      ${active
-        ? html`<a class="as" href="#opening-${active.id}">
-            <span class="caps who">As ${sideName(side)}</span>
-            <h4>${active.name}</h4><span class="mv">${active.moves}</span>
-            <span class="ct"><b>${active.count}<small>/${active.target}</small></b>${pips(active.count, active.target)}</span>
-            ${active.reach.of ? html`<span class="note">Reached in ${active.reach.reached} of your last ${active.reach.of} ${sideName(side)} games.</span>` : nothing}
-          </a>`
-        : html`<p class="as"><span class="caps who">As ${sideName(side)}</span>${this.state.plan.atLimit
-            ? `Your next ${sideName(side)} opening needs a membership.`
-            : `No ${sideName(side)} openings left to uncover from here.`}</p>`}
-      ${parked.map((p) => html`<div class="row" style="margin:-6px 0 14px">
-        <span class="fine">Parked: ${p.name}, ${p.count} of ${p.target}</span>
-        <button class="link" ?disabled=${this.busy} @click=${() => this.switchTo({ id: p.id })}>Resume</button></div>`)}
-      ${this.error && parked.length ? html`<p style="color:var(--bad)">${this.error}</p>` : nothing}`
-  }
-
-  /** "Follow the advice" missions, started when recent games in an opening fall below the target. */
-  renderAdvice() {
-    const list = this.state.missions.advice
-    if (!list.length) return nothing
-    return html`<div>
-      <h3>Advice missions</h3>
-      ${list.map((m) => html`<a class="as" href="#opening-${m.id}">
-        <span class="caps who">Follow the advice · as ${sideName(m.side)}</span>
-        <h4>${m.name}</h4>
-        <span class="ct">${m.played ? html`<b>${m.current}<small>%</small></b>` : nothing}${pips(m.played, m.of)}</span>
-        <span class="note">Your last ${m.of} games here averaged ${m.startAverage}%. Average ${m.threshold}% over ${m.of} new ones.</span>
-      </a>`)}
-    </div>`
   }
 
   render() {
@@ -248,35 +218,17 @@ class CbMap extends View {
         <div class="canvas" style="width:${width}px;height:${height}px;transform:translate(${v.x}px,${v.y}px) scale(${v.k})">
           <svg width=${width} height=${height} aria-hidden="true">${edges.map(({ from, to }) => {
             // Lines run from diagram to diagram, not from the edges of the tiles.
-            const mid = (it) => it.y + (it.node && it.node.status !== 'start' ? BOARD_MID : it.h / 2 - (it.node ? 12 : 0))
-            const x1 = from.x + (W + BOARD) / 2 + 10, y1 = mid(from), x2 = to.x + (to.fog ? 4 : (W - BOARD) / 2 - 10), y2 = mid(to), m = (x1 + x2) / 2
+            const faint = to.fog || to.faint
+            const mid = (it) => it.y + ((it.via && !it.faint) || (it.node && it.node.status !== 'start') ? BOARD_MID : it.h / 2 - (it.node ? 12 : 0))
+            const x1 = from.x + (from.faint ? 36 : from.via ? W / 2 + VIA_HALF : (W + BOARD) / 2 + 10), y1 = mid(from)
+            const x2 = to.x + (faint ? 4 : to.via ? W / 2 - VIA_HALF : (W - BOARD) / 2 - 10), y2 = mid(to), m = (x1 + x2) / 2
             return svg`<path d="M${x1} ${y1} C${m} ${y1} ${m} ${y2} ${x2} ${y2}" fill="none"
-              stroke=${to.fog ? 'var(--muted)' : 'var(--ink)'} stroke-width="1"
-              stroke-dasharray=${to.fog ? '1 4' : nothing} stroke-linecap="round" />`
+              stroke=${faint ? 'var(--muted)' : 'var(--ink)'} stroke-width="1"
+              stroke-dasharray=${faint ? '1 4' : nothing} stroke-linecap="round" />`
           })}</svg>
           ${all.map((it) => this.renderNode(it))}
         </div>
-      </div>
-      <aside class="sidebar">
-        ${s.plan.subscribed ? nothing : html`<cb-plan .plan=${s.plan}></cb-plan>`}
-        <div>
-          <h3>Active missions</h3>
-          ${this.renderMission('w')}${this.renderMission('b')}
-        </div>
-        ${this.renderAdvice()}
-        <div>
-          <h3>Latest results</h3>
-          ${s.latest.length
-            ? html`${s.latest.map((g) => html`<div class="res">
-                <b>${resultVerb[g.result]}</b> as ${sideName(g.side)}, ${g.opening?.hidden ? html`<span class="hid">in a line not yet uncovered</span>`
-                  : g.opening ? g.opening.name : 'off the map'}.
-                <span>${verdict(g.verdict, { short: true })}${g.advice?.score != null ? html` · advice ${accuracy(g.advice.score, s.adviceThreshold)}` : nothing}</span></div>`)}
-              <p style="margin-top:12px"><a class="caps" href="#games">All games</a></p>`
-            : html`<p class="fine">Nothing yet. Games you finish from now on show up here after a sync.</p>`}
-        </div>
-        <div class="fine">${s.totals.uncovered} of ${s.totals.openings} openings uncovered, ${s.totals.done} complete.<br>
-          <a href="/privacy" target="_blank" rel="noopener">Privacy</a> · <a href="/terms" target="_blank" rel="noopener">Terms</a></div>
-      </aside>`
+      </div>`
   }
 }
 customElements.define('cb-map', CbMap)

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phase 1 comps</title>
+<link rel="stylesheet" href="../../public/app.css">
+<link rel="stylesheet" href="kit.css">
+</head>
+<body>
+<div id="top" class="comp" style="padding-bottom:0"></div>
+<main class="comp" style="padding-top:0">
+  <h1>Store the first 30 moves</h1>
+  <p class="stand">Phase 1 of <a href="../../design/01-deeper-games-and-rating-stats.md">01-deeper-games-and-rating-stats.md</a>.
+    Three ways to tell players what happens on their first sync after the deploy.</p>
+  <div class="why">
+    <p>Most of Phase 1 can't be seen. Games are stored to move 30 instead of 15, and nothing on screen reads past move 15 until
+      the middlegame work arrives. The one thing a player does notice is the first sync after the deploy, which reads their older games
+      again. For a chess.com player with five years of games that takes seconds to a minute. For a Lichess player it takes about a
+      minute, longer if other players' syncs are queued ahead.</p>
+    <p>Today that minute shows only <i>Checking…</i> in the masthead. The options differ in how much more they say, and in what the
+      server has to send to make that possible.</p>
+  </div>
+  <ol class="opts">
+    <li><a href="a-notice.html"><b>a</b><b>The notice</b><em>Say nothing until the sync is done, then add one sentence to the usual notice. Needs one more number in the sync reply.</em></a></li>
+    <li><a href="b-dateline.html"><b>b</b><b>The dateline <span class="caps rec">Suggested</span></b><em>While it runs, the masthead says what is happening and that it happens once. The notice from A when it finishes, and one line on the Games page.</em></a></li>
+    <li><a href="c-column-note.html"><b>c</b><b>A note in the column</b><em>A boxed note at the top of the sidebar explains the change and why, then reports what was read. The most to build, and it adds an extra notice to the sidebar.</em></a></li>
+  </ol>
+  <div class="needs">
+    <span class="caps">The same in every option</span>
+    <ul>
+      <li>The opening pages, the map and the game log look the same. Ideas are still checked up to move 10, so almost no advice score changes. The design doc's
+        caveat applies only to ideas whose window runs past move 15, and the tree has none today.</li>
+      <li>New players never see any of this, because <code>newProgress</code> starts them at 60 plies.</li>
+      <li>B's dateline fits on one line at desktop width. On a phone the dateline already wraps today, and B's wording adds about one more line.</li>
+      <li>Words new in a frame are highlighted. Use <i>Hide highlights</i> at the top to see the frames as players would.</li>
+    </ul>
+  </div>
+</main>
+<script src="kit.js"></script>
+<script>Kit.mount('index.html')</script>
+</body>
+</html>

@@ -3,7 +3,7 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypt
 import { withTx } from './db.js'
 
 /** Version of the terms and privacy policy, and of the consent wording below. Bump when either changes. */
-export const POLICY_VERSION = '2026-11-22'
+export const POLICY_VERSION = '2026-11-26'
 export const CONSENT_TEXT = {
   age: 'I am 16 or older.',
   terms: 'I accept the Terms of Use and have read the Privacy Policy.',

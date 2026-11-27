@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phase 1 · The notice</title>
+<link rel="stylesheet" href="../../public/app.css">
+<link rel="stylesheet" href="kit.css">
+</head>
+<body>
+<div id="top" class="comp" style="padding-bottom:0"></div>
+<main class="comp" style="padding-top:0">
+  <h1>A · The notice</h1>
+  <p class="stand">Nothing changes while the sync runs. When it ends, the usual notice gets one more sentence.</p>
+  <div class="needs">
+    <span class="caps">What it needs</span>
+    <ul>
+      <li><code>runSync</code> returns <code>lengthened</code>, the total from each <code>insertGames</code> call, next to <code>added</code> and <code>counted</code>.</li>
+      <li><code>sync()</code> in <code>public/src/app.js</code> adds the sentence when <code>lengthened</code> is above zero, even on a quiet sync, which would otherwise show nothing.</li>
+    </ul>
+  </div>
+  <div id="frames"></div>
+</main>
+<script src="kit.js"></script>
+<script>
+const { JUST, openings, notice, frame } = Kit
+document.getElementById('frames').innerHTML = [
+  frame(1, 'While it runs',
+    openings({ mast: { button: 'Checking…', busy: true } }),
+    '<b>Unchanged.</b> The link reads <i>Checking…</i> for up to a minute. A player who doesn\'t know a re-read is happening may think the sync is stuck, but it happens only once.'),
+  frame(2, 'When it finishes',
+    openings({ mast: JUST, notice: notice('3 new games, 1 counted toward a mission. <span class="new">Your 1,184 older games were read again, up to move 30.</span>') }),
+    '<b>One sentence added.</b> It says what happened and leaves out why. Players have no use for the reason until the middlegame work ships, and that work can announce itself.'),
+  frame(3, 'With no new games',
+    openings({ mast: JUST, notice: notice('<span class="new">Your 1,184 older games were read again, up to move 30.</span>') }),
+    'A quiet sync with no new games normally shows nothing. This time it shows the sentence on its own, so the minute of <i>Checking…</i> is explained after the fact.'),
+  frame(4, 'If one site fails',
+    openings({ mast: JUST, notice: notice('3 new games, but one site could not be read. <span class="new">Your 812 older chess.com games were read again, up to move 30; Lichess will be next time.</span> Lichess did not answer (503).', true) }),
+    'The marker for the failed site stays below 60, so the next sync tries again. The notice keeps today\'s order: what worked, then the site\'s own error last.'),
+].join('')
+Kit.mount('a-notice.html')
+</script>
+</body>
+</html>

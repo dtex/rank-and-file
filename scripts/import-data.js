@@ -31,7 +31,7 @@ try {
   let total = 0
   for (const month of months) {
     const games = read(path.join(dir, 'games', `${month}.json`), [])
-    total += (await store.saveMonth(month, games, meta.etags?.[month] ?? null)).length
+    total += (await store.saveMonth(month, games, meta.etags?.[month] ?? null)).added.length
   }
   await store.saveProgress(progress)
   console.log(`Imported ${total} games from ${months.length} months and ${Object.keys(progress.missions).length} missions for ${progress.settings.username}.`)

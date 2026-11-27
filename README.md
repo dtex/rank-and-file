@@ -15,9 +15,14 @@ The app itself is one page at `/app`. Sign-in, emailed links and Stripe all retu
 
 You get a mission for one opening per colour, play your normal games on chess.com or Lichess, and the app
 counts the ones that actually reached that opening. Finish a mission and the next opening
-comes out of the fog: of the hidden ones next to what you have uncovered, the one your last
-1,000 games reached most often with that colour. With nothing to go on it follows the map's
-main lines. Nobody picks the next opening themselves.
+comes out of the fog: of the hidden ones next to what you have uncovered, the one most popular
+on chess.com. Where the figures tie it follows the map's main lines. Nobody picks the next
+opening themselves.
+
+The figures are in `data/popularity.json`: for each opening, how many games of a sample of recent
+chess.com games reached it. The openings editor (below) measures them and writes the file, and
+`npm run popularity` writes it again from the sample the editor last gathered. The app reads it
+at start-up; an opening with no figure counts as never reached.
 
 ## chess.com and Lichess
 
@@ -33,6 +38,13 @@ being played last time is picked up. Lichess asks for one request at a time and 
 games a second, so a first import can take most of a minute and other users' Lichess syncs wait
 behind it.
 
+The first 30 moves of each game are kept. Games stored when the limit was 15 are fetched again
+once, on each user's next sync: every chess.com month, and the newest 1,000 Lichess games. Older
+Lichess games keep 15 moves, because fetching a long history would hold up every other user's
+Lichess sync. A game already stored is only ever replaced by a longer copy, and keeps its verdict.
+That sync can take a minute, and the app says what it is doing while it runs. If a site fails, it is
+tried again on the next sync.
+
 Adding a site keeps progress. Changing or removing a username starts that user over.
 
 ## Advice accuracy
@@ -40,13 +52,17 @@ Adding a site keeps progress. Changing or removing a username starts that user o
 Each opening page lists a few ideas. Once you have uncovered an opening, every game that reaches
 it with your colour is scored on how well you followed them, as a percentage shown in the game
 log (select the score to see idea by idea why). If your last 4 scored games in an opening average
-below the target in Settings (70% to start with), you get an advice mission for it: average the
-target or better over 4 new games. It runs beside your opening missions.
+below the target in Settings (70% to start with), you get an advice mission for it: bring the
+average of your last 4 back up to the target. It runs beside your opening missions.
 
 The scoring uses the `checks` next to each opening's `ideas` in `data/tree.json`, one per idea, or
 `null` for an idea that is only something to know. The format is described at the top of
-`services/checks.js`; `npm run tree:check` validates it. Ideas that did not come up in a game, or
+`services/checks.js`; `npm run tree:check` validates it, and `npm run openings` edits it in the browser. Ideas that did not come up in a game, or
 that the game ended too soon to judge, are left out of that game's score.
+
+A check can look as far as move 30, the part of each game that is stored. A game with fewer moves
+than a check needs is left out, never counted as a miss. That includes old games still kept to
+move 15.
 
 ## Running it
 
@@ -81,9 +97,15 @@ about them, and delete their account.
 
 ## Free use, membership and gifts
 
-A free account keeps the two starting openings and can uncover four more. Membership
-($5 a month or $50 a year, through Stripe) uncovers the rest. When a membership ends, openings
-past the first six are locked with their progress kept, and come back on resubscribing.
+A free account keeps the two starting openings and can uncover two more. Membership
+($5 a month or $40 a year, through Stripe) uncovers the rest. When a membership ends, openings
+past the first four are locked with their progress kept, and come back on resubscribing.
+
+The first 100 subscribers pay $2 a month instead, with no yearly plan, and keep that price for good
+(`services/pricing.js`). While places are left, everyone who is not yet a member is offered that
+price. Subscribing at it takes a row in `early_adopters`, and an account with a row gets the early
+price every time it subscribes. Checkout charges it as its own amount on the membership product,
+so it needs no price of its own in `.env`.
 
 Stripe setup, once:
 
@@ -108,8 +130,45 @@ The gift waits for that address and starts the first time the person uses the ap
 ## Admins
 
 List admin email addresses in `ADMIN_ACCOUNTS`, separated by commas. An admin who selects a hidden
-tile on the map gets that opening's full study page without uncovering it. From there they can
+opening on the map or in the outline gets that opening's full study page without uncovering it. From there they can
 carry on to the hidden openings beyond it.
+
+## Editing the openings
+
+`npm run openings` starts a separate editor at http://localhost:3211 for `data/tree.json`. It is not
+part of the app: nothing in `app.js` or `start.js` loads `tools/openings/`, it listens on this
+machine only, and it refuses to start with `NODE_ENV=production`.
+
+The list shows every opening with the share of recent games that reach it on chess.com and on
+Lichess. Select one to see and change all of its properties, add an opening after it, or delete
+it. Saving checks the whole map the way the app does at start-up (legal moves, each line extending
+its parent, no two openings on one position, valid checks) and writes nothing if anything is wrong.
+The file keeps its hand-written layout, so a change shows up in `git diff` as only the lines that
+changed. Deleting an opening moves the ones beneath it up to its parent.
+
+Every opening has a permanent `id`, a canonical `name` and optional `aliases`. Players' progress
+is stored under the id, so the editor never changes it and makes one up for each new opening (the
+older ids, such as `italian`, read like names but are only keys). That leaves the name free to
+change at any time. A canonical name belongs to one opening. `aliases` lists other names for the
+same opening, such as regional or older ones, and an alias may repeat a name used elsewhere. The
+app does not show aliases yet.
+
+Each opening can carry a `history`: free-form text on where the opening comes from and why it has
+its name. The app shows it on the opening's page, under the ideas. Anything listed under "Other properties" is stored on the
+opening as it is.
+
+The reach figures come from a sample of about 1,500 rated games per site from the last 30 days,
+kept in `tools/openings/.cache/` (not in git) and gathered the first time the editor starts;
+"Refresh sample" gathers a new one. Neither site publishes these figures without a login, so they
+are measured on public games: on chess.com by starting from the active members of a club and
+following each player's opponents, six games a player; on Lichess from the arena tournaments that
+finished in the last hour or two. A game counts for an opening when it passes through that
+position by any move order, as it does for a mission. Treat small percentages as rough: one game
+in 1,500 is 0.07%.
+
+The chess.com figures also decide which opening a player uncovers next, so the editor writes them to
+`data/popularity.json` whenever it saves the map or finishes a new chess.com sample. Commit that
+file with `data/tree.json`.
 
 ## Marketing email
 

@@ -4,6 +4,7 @@
 import { LINK_MINUTES, POLICY_VERSION, SESSION_DAYS } from '../services/accounts.js'
 import { GIFT_RENEW_DAYS } from '../services/billing.js'
 import { FREE_OPENINGS } from '../services/missions.js'
+import { EARLY_PLACES, EARLY_PRICE, FULL_PRICE } from '../services/pricing.js'
 import { esc, sitePage } from '../services/site.js'
 
 /** Both pages use the site's shell, set as a single column of text. */
@@ -34,6 +35,7 @@ export default async function legalRoutes(app) {
       <tr><td>Your email address</td><td>To sign you in, to match your sign-in methods to one account, and to send sign-in links</td><td>Needed to provide the service</td></tr>
       <tr><td>Your account id at Google or GitHub, if you sign in with them</td><td>To recognise you when you sign in again</td><td>Needed to provide the service</td></tr>
       <tr><td>Your username on chess.com, on Lichess, or both, and the finished games those sites publish for it (moves of the opening, result, date, time control, and both players’ usernames and ratings)</td><td>To track your opening missions and score your games</td><td>Needed to provide the service</td></tr>
+      <tr><td>The same games, counted together with every other player’s</td><td>To decide which openings, replies and plans to write lessons for next. We use only totals, such as how often a reply is played and how players score against it. No username, rating or single game appears in them, and a move met by fewer than 3 players is left out</td><td>Legitimate interest</td></tr>
       <tr><td>Your settings, missions and progress</td><td>To run the app for you</td><td>Needed to provide the service</td></tr>
       <tr><td>Whether you asked for news and tips, and a dated record of each time you agreed or withdrew, with the wording you saw</td><td>To send marketing email only to people who asked, and to be able to show that they did</td><td>Your consent; legal obligation to keep proof of it</td></tr>
       <tr><td>A record that you accepted the terms and confirmed your age</td><td>To show that you did</td><td>Legitimate interest</td></tr>
@@ -42,6 +44,7 @@ export default async function legalRoutes(app) {
       <tr><td>If you were gifted a membership: the address it was given to and its dates</td><td>To apply the gift</td><td>Needed to provide the service</td></tr>
       <tr><td>Server logs: the address your request came from, the time and the page</td><td>To keep the service secure and find faults</td><td>Legitimate interest</td></tr>
     </table>
+    <p>The totals stay with us, and are used only to choose what to write. You can have your games left out of them: write to ${contact}, and your games are left out from then on.</p>
     <p>We do not keep passwords (there are none), your name, or card details. Payments are taken by Stripe, and your card never reaches us.</p>
 
     <h2>Marketing email</h2>
@@ -103,8 +106,10 @@ export default async function legalRoutes(app) {
 
     <h2>Free use and membership</h2>
     <ul>
-      <li>You can uncover ${FREE_OPENINGS} openings for free: the two you start with and four more.</li>
-      <li>Membership uncovers the rest. It costs $5 a month or $50 a year, charged in advance through Stripe, and renews automatically until you cancel.</li>
+      <li>You can uncover ${FREE_OPENINGS} openings for free: the two you start with and two more.</li>
+      <li>Membership uncovers the rest. It costs $${FULL_PRICE.month} a month or $${FULL_PRICE.year} a year, charged in advance through Stripe, and renews automatically until you cancel.</li>
+      <li>The first ${EARLY_PLACES} accounts to subscribe pay an early-adopter price instead: $${EARLY_PRICE.month} a month, with no yearly plan.
+        An account that subscribed at the early-adopter price keeps it for as long as the account exists, including after cancelling and subscribing again. The price belongs to the account and cannot be passed to another; it ends if the account is deleted.</li>
       <li>You can cancel at any time under Settings, Manage billing. You keep membership until the end of the period you paid for.</li>
       <li>When a membership ends, openings beyond your first ${FREE_OPENINGS} are locked. Their progress is kept and returns if you subscribe again. Games played while an opening is locked do not count toward it.</li>
       <li>If you are a consumer in the EU or UK, you may cancel within 14 days of your first payment for a full refund by writing to us. Otherwise payments are not refunded, except where the law requires.</li>

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instead of the outline · D · Step through</title>
+<link rel="stylesheet" href="../../public/app.css">
+<link rel="stylesheet" href="views.css">
+<link rel="stylesheet" href="kit.css">
+</head>
+<body>
+<div id="top" class="comp" style="padding-bottom:0"></div>
+<main class="comp" style="padding-top:0">
+  <h1>D · Step through</h1>
+  <p class="stand">One position at a time. The board shows where you are, and the list under it shows the moves that leave it.</p>
+  <div class="why"><p>Instead of showing the whole tree, this walks it. The trail above the name is the moves so far, and each one steps back to that position. The list is what can be played next, with a note on how many openings lie beyond each move and whether one of them leads to an active mission.</p><p>It opens on White's active mission. The links at the top jump to either mission or back to the start. Unexplored lines are one row for each colour.</p></div>
+  <section class="fr"><div class="caps"><b>1</b><span>On a laptop</span></div>
+    <div class="shot"><iframe data-opt="d" title="D · Step through on a laptop"></iframe></div>
+    <p class="fcap">This comp is live: choose a move in the list, or a step in the trail, to move around the sample tree.</p></section>
+  <section class="fr"><div class="caps"><b>2</b><span>On a phone</span></div>
+    <div class="pair"><div class="shot"><iframe data-opt="d" title="D · Step through on a phone"></iframe></div>
+      <div class="notes"><h4>What works</h4><ul><li>The best fit for a phone: a board, a title and a short list, with large targets.</li><li>Follows how an opening is played, a move at a time, with the position always in view.</li><li>Never gets longer as more openings are uncovered.</li></ul><h4>What it costs</h4><ul><li>No overview. Finding an opening means knowing the moves that reach it, or going back to the map.</li><li>More taps than any other option to get to a deep line.</li><li>Sits close to the opening's own page, so the difference between <i>here</i> and <i>Read about this opening</i> has to stay clear.</li></ul><h4>What it needs</h4><ul><li>A new component in place of <code>cb-outline</code> that remembers the position it is on. Nothing new from the server.</li><li>A choice of where it opens: White's active mission here, or wherever the player last was.</li></ul></div></div></section>
+</main>
+<script src="kit.js"></script>
+<script>Comp.mount('d-step-through.html')</script>
+</body>
+</html>

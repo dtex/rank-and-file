@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phase 2 · In the record box</title>
+<link rel="stylesheet" href="../../public/app.css">
+<link rel="stylesheet" href="kit.css">
+</head>
+<body>
+<div id="top" class="comp" style="padding-bottom:0"></div>
+<main class="comp" style="padding-top:0">
+  <h1>A · In the record box</h1>
+  <p class="stand">The bands go straight under Won, Drawn and Lost, so the record and its breakdown are read together.</p>
+  <div class="needs">
+    <span class="caps">How it fits</span>
+    <ul>
+      <li>Four columns fit in the box: <i>Opponents</i>, <i>Games</i>, <i>W–D–L</i> and <i>Score</i>. Won, Drawn and Lost share one column as <i>10–1–3</i>, the way results are written in tournament tables.</li>
+      <li>The band names are short: <i>Weaker</i>, <i>Your level</i> and <i>Stronger</i>. One line of small print explains the 100 points.</li>
+      <li>When the player is struggling (8 or more games against stronger players, scoring under 35%), the Stronger row turns red.</li>
+      <li>At widths below 980 pixels the box already moves under the board and ideas, and the table goes with it.</li>
+    </ul>
+  </div>
+  <div id="frames"></div>
+</main>
+<script src="kit.js"></script>
+<script>
+const { JUST, opening, openings, frame } = Kit
+const bands = (rows, { note = true, unrated = 0, head = 'By opponent rating', foot = '' } = {}) => `<h4><span class="new">${head}</span></h4>
+  <table class="bands new">
+    <tr><th>Opponents</th><th>Games</th><th>W–D–L</th><th>Score</th></tr>
+    ${rows.map(([name, g, w, d, l, bad]) => `<tr class="${bad ? 'bad' : ''}"><td>${name}</td><td>${g}</td>
+      ${g ? `<td>${w}–${d}–${l}</td><td>${Math.round(((w + d / 2) / g) * 100)}%</td>` : '<td class="na">–</td><td class="na">–</td>'}</tr>`).join('')}
+  </table>
+  ${note ? `<p class="fine new" style="margin-top:8px">${foot || 'Weaker and stronger mean 100 points or more below or above your rating in that game.'}${unrated ? ` ${unrated} game${unrated === 1 ? '' : 's'} against unrated opponents, such as the computer, ${unrated === 1 ? 'is' : 'are'} left out.` : ''}</p>` : ''}`
+const trend = `<p class="trend new">Your last 20 games here scored <b class="down">41%</b>, down from 58% in the 20 before.</p>`
+const STRUGGLE = [['Weaker', 14, 10, 1, 3], ['Your level', 22, 11, 2, 9], ['Stronger', 9, 2, 0, 7, true]]
+document.getElementById('frames').innerHTML = [
+  frame(1, 'An opening where the player is struggling',
+    opening({ mast: JUST, inBox: bands(STRUGGLE) + trend }),
+    '<b>The table sits between the record and <i>Where the other 75 went</i>.</b> The record, the bands and the trend read top to bottom as one story. The red row shows the problem without any extra words.', 1320),
+  frame(2, 'Early on',
+    opening({ mast: JUST, rec: { reached: 9, of: 31, win: 4, draw: 1, loss: 4, elsewhere: [11, 6, 3, 2] },
+      inBox: bands([['Weaker', 3, 2, 0, 1], ['Your level', 5, 2, 1, 2], ['Stronger', 0]], { unrated: 1 }) }),
+    'With fewer than 40 games there is no trend line. A band with no games shows dashes rather than 0%. The unrated game counts in the record above but not in the bands, and the small print says so, so the totals don\'t look wrong.', 1320),
+  frame(3, 'The outline',
+    openings({ mast: JUST, marks: { sicilian: '<span class="caps vs new" title="9 games against stronger opponents, scoring 22%">22% v stronger</span>' } }),
+    '<b>The marker is the figure itself</b>, in red small capitals before the status. It needs no key, and it doesn\'t look like the round <i>!</i> flag that marks an advice mission. The tooltip gives the number of games.', 560),
+  frame(4, 'If bands were fixed ratings',
+    opening({ mast: JUST, inBox: bands([['Under 1300', 12, 9, 1, 2], ['1300 to 1500', 20, 10, 2, 8], ['Over 1500', 8, 2, 0, 6, true]],
+      { head: 'By opponent rating, chess.com', foot: 'Your chess.com rating is 1412 today. Your 5 Lichess games here would need a table of their own.' }) + trend }),
+    '<b>For the doc\'s open decision only.</b> Fixed ranges read at a glance, but they drift: once the player passes 1500, <i>Over 1500</i> no longer means stronger. The two sites also rate on different scales, so each would need its own table, and a player on both sites gets two tables. That is why relative bands are suggested.', 1320),
+].join('')
+Kit.mount('p2-a-box.html')
+</script>
+</body>
+</html>

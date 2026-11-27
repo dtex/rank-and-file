@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phase 1 · A note in the column</title>
+<link rel="stylesheet" href="../../public/app.css">
+<link rel="stylesheet" href="kit.css">
+</head>
+<body>
+<div id="top" class="comp" style="padding-bottom:0"></div>
+<main class="comp" style="padding-top:0">
+  <h1>C · A note in the column</h1>
+  <p class="stand">A boxed note at the top of the sidebar says what changed and why, then reports what was read until the player dismisses it.</p>
+  <div class="needs">
+    <span class="caps">What it needs</span>
+    <ul>
+      <li>Everything in B, with <code>lengthened</code> counted for each site rather than only in total.</li>
+      <li>Somewhere in progress to keep the counts and whether the note was dismissed, plus a route to dismiss it. The <code>events</code> list could carry it, but events open as overlays, and this is too small for one.</li>
+      <li>It is the first sidebar item that announces a change. Once it exists, the next announcement will be expected to use it too.</li>
+    </ul>
+  </div>
+  <div id="frames"></div>
+</main>
+<script src="kit.js"></script>
+<script>
+const { JUST, openings, notice, frame } = Kit
+const note = (kind, chip, body, dismiss = false) => `<div class="mcard ${kind}" style="margin:0"><span class="chip">${chip}</span>
+  <p style="margin:6px 0 ${dismiss ? '8px' : '0'}">${body}</p>${dismiss ? '<button class="link">Dismiss</button>' : ''}</div>`
+const H = 640
+document.getElementById('frames').innerHTML = [
+  frame(1, 'While it runs',
+    openings({ mast: { button: 'Checking…', busy: true }, top: note('ask', '<span class="new">Reading older games</span>',
+      '<span class="new">Rank and File now keeps the first 30 moves of each game, up from 15. The lessons coming next are about moves 10 to 20, where most games between players of similar strength are decided. Your older games are being read again now. This happens once and can take a minute.</span>') }),
+    '<b>The note sits above the plan card</b> and uses the accent rule that the free-plan card uses when it asks for something. It is the only option that gives the reason, and that sets up the middlegame work before it exists.', H),
+  frame(2, 'When it finishes',
+    openings({ mast: JUST, notice: notice('3 new games, 1 counted toward a mission.'), top: note('', '<span class="new">Older games read to move 30</span>',
+      '<span class="new">812 from chess.com and 372 from Lichess. Lichess games older than your newest 1,000 keep their first 15 moves.</span>', true) }),
+    'The notice stays as it is today, and the note reports the counts. The note stays until it is dismissed, so a player who wasn\'t watching still sees it.', H),
+  frame(3, 'If one site fails',
+    openings({ mast: JUST, notice: notice('3 new games, but one site could not be read. Lichess did not answer (503).', true), top: note('ask', '<span class="new">Reading older games</span>',
+      '<span class="new">812 chess.com games read to move 30. Lichess could not be read, so its games will be read again at the next sync.</span>') }),
+    'Until every site is done the note keeps its accent rule and can\'t be dismissed.', H),
+].join('')
+Kit.mount('c-column-note.html')
+</script>
+</body>
+</html>

@@ -14,9 +14,19 @@ export function testPool() {
     // Idle connections must not keep the test process alive.
     const pool = new pg.Pool({ connectionString: TEST_DATABASE_URL, allowExitOnIdle: true })
     await migrate(pool)
+    await setEarlyPlaces(pool, 100)
     return pool
   })()
   return ready
+}
+
+/**
+ * Set how many early-adopter places are taken by nobody in particular. Tests start with all 100
+ * gone, so prices are the full ones; a test that frees some puts them back when it is done.
+ */
+export async function setEarlyPlaces(pool, taken) {
+  await pool.query('delete from early_adopters')
+  await pool.query('insert into early_adopters (user_id) select null from generate_series(1, $1)', [taken])
 }
 
 export async function newUser(pool) {

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phase 2 · A section of its own</title>
+<link rel="stylesheet" href="../../public/app.css">
+<link rel="stylesheet" href="kit.css">
+</head>
+<body>
+<div id="top" class="comp" style="padding-bottom:0"></div>
+<main class="comp" style="padding-top:0">
+  <h1>B · A section of its own</h1>
+  <p class="stand">The doc's table in full, in a section after the board, the ideas and the record box.</p>
+  <div class="needs">
+    <span class="caps">How it fits</span>
+    <ul>
+      <li>All six columns, with the full band names from the doc, and a score bar like the ones in <i>Where the other 75 went</i>.</li>
+      <li>It comes before <i>History</i> and <i>From here</i>, so it is the first thing after the three columns.</li>
+      <li>On a laptop screen it starts below the fold. A player reading the record box has to scroll to find the breakdown.</li>
+    </ul>
+  </div>
+  <div id="frames"></div>
+</main>
+<script src="kit.js"></script>
+<script>
+const { JUST, opening, openings, frame } = Kit
+const row = (name, sub, g, w, d, l, bad) => {
+  const s = Math.round(((w + d / 2) / g) * 100)
+  return `<tr class="${bad ? 'bad' : ''}"><td>${name} <small>${sub}</small></td><td>${g}</td><td>${w}</td><td>${d}</td><td>${l}</td>
+    <td class="nw"><span class="meter"><s style="width:${s}%"></s></span>${s}%</td></tr>`
+}
+const section = `<div class="section new"><div class="rule">Against weaker and stronger players</div>
+  <p class="trend" style="font-size:19px;margin:0 0 4px">Your last 20 games here scored <b class="down">41%</b>, down from 58% in the 20 before.</p>
+  <div class="tblwrap wide-bands"><table>
+    <tr><th>Opponents</th><th>Games</th><th>Won</th><th>Drawn</th><th>Lost</th><th>Score</th></tr>
+    ${row('Weaker', '100+ below you', 14, 10, 1, 3)}
+    ${row('About your level', '', 22, 11, 2, 9)}
+    ${row('Stronger', '100+ above you', 9, 2, 0, 7, true)}
+  </table></div>
+  <p class="fine" style="margin-top:10px">Ratings are the ones recorded on each game, yours and your opponent's, from the same site.</p></div>`
+document.getElementById('frames').innerHTML = [
+  frame(1, 'The opening page, scrolled to the section',
+    opening({ mast: JUST, below: section }),
+    '<b>After the three columns, before History.</b> The section uses the same rule and table styles as <i>Games that counted</i> further down. The trend line is set larger, as the section\'s opening sentence.', 1620),
+  frame(2, 'The outline',
+    openings({ mast: JUST, marks: { under: { sicilian: '<span class="tough new">Hard going against stronger players</span>' } } }),
+    '<b>The marker is a line of words</b> under the moves. It is the clearest of the three markers, but it makes the row taller and, on a phone, wraps under the moves.', 560),
+].join('')
+Kit.mount('p2-b-section.html')
+</script>
+</body>
+</html>

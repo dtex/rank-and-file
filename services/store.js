@@ -1,6 +1,7 @@
 // Postgres storage. Everything a user's missions depend on is reached through
 // a store bound to that user, so one user's request can never touch another's rows.
 import { withTx } from './db.js'
+import { MAX_PLIES } from './chesscom.js'
 import { usernamesOf } from './sites.js'
 
 export const DEFAULT_SETTINGS = {
@@ -9,6 +10,16 @@ export const DEFAULT_SETTINGS = {
   timeClasses: ['blitz', 'rapid', 'daily'],
   ratedOnly: true,
   adviceThreshold: 70,
+  // How the Openings screen shows the openings, chosen separately for each kind of device.
+  openingsLayout: { desktop: 'map', mobile: 'outline' },
+}
+
+export const LAYOUT_DEVICES = ['desktop', 'mobile']
+export const LAYOUTS = ['map', 'outline']
+
+/** The layout chosen for each kind of device, with the default for any not chosen yet. */
+export function openingsLayout(settings) {
+  return { ...DEFAULT_SETTINGS.openingsLayout, ...settings?.openingsLayout }
 }
 
 export function newProgress(now = Math.floor(Date.now() / 1000)) {
@@ -20,7 +31,22 @@ export function newProgress(now = Math.floor(Date.now() / 1000)) {
     slots: { w: null, b: null },
     events: [],
     lastSync: null,
+    // How many plies of each game were kept when each site was last fetched in full.
+    movesStored: { chesscom: MAX_PLIES, lichess: MAX_PLIES },
   }
+}
+
+/** What `movesStored` means where progress has none: the limit before it was recorded. */
+const PLIES_BEFORE = 30
+
+/**
+ * The followed sites whose stored games were trimmed shorter than games are now.
+ * Their next sync fetches the games again to lengthen them.
+ */
+export function sitesBehind(progress) {
+  return Object.entries(usernamesOf(progress.settings))
+    .filter(([site, name]) => name && (progress.movesStored?.[site] ?? PLIES_BEFORE) < MAX_PLIES)
+    .map(([site]) => site)
 }
 
 /** Progress saved before Lichess was supported has a single `username`, which was the chess.com one. */
@@ -30,19 +56,29 @@ function upToDate(progress) {
   return progress
 }
 
-/** Insert games that are not stored yet, inside a transaction. Returns the ones that were new. */
+/**
+ * Insert games that are not stored yet, inside a transaction. A game already stored is
+ * replaced only by a copy with more moves, and keeps its verdict: verdicts depend on the
+ * opening, which the shorter copy already held. Returns { added, lengthened }: the games
+ * that were new, and how many stored games got longer.
+ */
 async function insertGames(db, userId, games) {
   const added = []
+  let lengthened = 0
   for (const g of games) {
     const { verdict = null, ...data } = g
     const res = await db.query(
       `insert into games (user_id, uuid, ended_at, data, verdict) values ($1, $2, $3, $4, $5)
-       on conflict (user_id, uuid) do nothing`,
+       on conflict (user_id, uuid) do update set data = excluded.data
+         where jsonb_array_length(games.data->'moves') < jsonb_array_length(excluded.data->'moves')
+       returning (xmax = 0) as inserted`,
       [userId, g.uuid, g.end, JSON.stringify(data), verdict && JSON.stringify(verdict)],
     )
-    if (res.rowCount) added.push(g)
+    if (!res.rowCount) continue
+    if (res.rows[0].inserted) added.push(g)
+    else lengthened++
   }
-  return added
+  return { added, lengthened }
 }
 
 const toGame = (row) => (row.verdict ? { ...row.data, verdict: row.verdict } : row.data)
@@ -70,21 +106,21 @@ export function createStore(pool) {
           const { rows } = await pool.query('select month, etag from archive_months where user_id = $1', [userId])
           return Object.fromEntries(rows.map((r) => [r.month, r.etag]))
         },
-        /** Record a fetched month. Returns the games that were not stored before. */
+        /** Record a fetched month. Returns { added, lengthened }, as insertGames does. */
         async saveMonth(month, games, etag = null) {
           return withTx(pool, async (db) => {
-            const added = await insertGames(db, userId, games)
+            const saved = await insertGames(db, userId, games)
             await db.query(
               `insert into archive_months (user_id, month, etag) values ($1, $2, $3)
                on conflict (user_id, month) do update set etag = coalesce(excluded.etag, archive_months.etag)`,
               [userId, month, etag],
             )
-            return added
+            return saved
           })
         },
-        /** Store games from a site that is not fetched by month. Returns the ones that were not stored before. */
+        /** Store games from a site that is not fetched by month. Returns { added, lengthened }. */
         async saveGames(games) {
-          if (!games.length) return []
+          if (!games.length) return { added: [], lengthened: 0 }
           return withTx(pool, (db) => insertGames(db, userId, games))
         },
         /** When the newest stored game from `site` started, in unix seconds, or null with none stored. */

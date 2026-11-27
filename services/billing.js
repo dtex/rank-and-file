@@ -1,5 +1,6 @@
 // Membership payments through Stripe: checkout, the customer portal, and
 // keeping each user's subscription state in step with Stripe's.
+import { claimEarlyPlace, earlyPlaces, priceFor } from './pricing.js'
 import { APP_PATH } from './site.js'
 
 const DAY = 86400
@@ -11,6 +12,9 @@ export const GIFT_RENEW_DAYS = 30
 /** Stripe needs a deferred first charge to be at least two days away. */
 const MIN_TRIAL_SECONDS = 2 * DAY + 3600
 
+/** How long a checkout page at the early price stays open. Stripe's shortest is half an hour. */
+const EARLY_OFFER_MINUTES = 31
+
 const fail = (statusCode, message) => Object.assign(new Error(message), { statusCode })
 
 export function createBilling({ pool, config, stripe }) {
@@ -18,6 +22,16 @@ export function createBilling({ pool, config, stripe }) {
   const enabled = !!stripe && !!prices.monthly && !!prices.yearly
   const need = () => {
     if (!enabled) throw fail(503, 'Membership is not on sale yet.')
+  }
+
+  /** The membership product at Stripe, found from the monthly price. */
+  let product = null
+  async function productId() {
+    if (!product) {
+      const price = await stripe.prices.retrieve(prices.monthly)
+      product = typeof price.product === 'string' ? price.product : price.product.id
+    }
+    return product
   }
 
   /** Copy a Stripe subscription's state onto its user. Safe to repeat and to run out of order. */
@@ -41,6 +55,8 @@ export function createBilling({ pool, config, stripe }) {
          subscription_period_end = to_timestamp($6), subscription_cancel_at_period_end = $7 where id = $1`,
       [user.id, customerId, sub.id, sub.status, item?.price?.recurring?.interval ?? null, periodEnd, !!(sub.cancel_at_period_end || sub.cancel_at)],
     )
+    // A subscription taken out at the early price gives its account an early place, kept from then on.
+    if (!ended && sub.metadata?.early_adopter) await claimEarlyPlace(pool, user.id)
     return true
   }
 
@@ -64,12 +80,21 @@ export function createBilling({ pool, config, stripe }) {
         // No charge until the gift runs out, so nobody pays for time they were given.
         if (plan.until - Date.now() / 1000 > MIN_TRIAL_SECONDS) subscription.trial_end = plan.until
       }
+      const price = priceFor(await earlyPlaces(pool, user.id))
+      if (price.early) subscription.metadata.early_adopter = '1'
+      if (which === 'yearly' && !price.year) throw fail(400, 'The early-adopter price is paid by the month.')
+      // The early price is not one of the two set up at Stripe, so it is spelled out, on the same product.
+      const item = price.early
+        ? { price_data: { currency: 'usd', product: await productId(), unit_amount: price.month * 100, recurring: { interval: 'month' } }, quantity: 1 }
+        : { price: prices[which], quantity: 1 }
       const session = await stripe.checkout.sessions.create({
         mode: 'subscription',
-        line_items: [{ price: prices[which], quantity: 1 }],
+        line_items: [item],
         client_reference_id: user.id,
         ...(user.stripe_customer_id ? { customer: user.stripe_customer_id } : { customer_email: user.email }),
         subscription_data: subscription,
+        // An early place is taken on payment, so an offer of one is not left open for long.
+        ...(price.early ? { expires_at: Math.floor(Date.now() / 1000) + EARLY_OFFER_MINUTES * 60 } : {}),
         success_url: `${config.baseUrl}${APP_PATH}?billing=success&session_id={CHECKOUT_SESSION_ID}#settings`,
         cancel_url: `${config.baseUrl}${APP_PATH}#settings`,
       })

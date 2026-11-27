@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phase 1 · The dateline</title>
+<link rel="stylesheet" href="../../public/app.css">
+<link rel="stylesheet" href="kit.css">
+</head>
+<body>
+<div id="top" class="comp" style="padding-bottom:0"></div>
+<main class="comp" style="padding-top:0">
+  <h1>B · The dateline</h1>
+  <p class="stand">While the re-read runs, the masthead says what is happening and that it happens only once. When it finishes, the notice from A appears.</p>
+  <div class="needs">
+    <span class="caps">What it needs</span>
+    <ul>
+      <li>Everything in A.</li>
+      <li><code>stateView</code> adds <code>catchingUp</code>: the sites the user follows whose <code>movesStored</code> is below <code>MAX_PLIES</code>. It is empty for everyone after their first sync.</li>
+      <li>The masthead uses it only while <code>syncing</code> is true. Before the sync starts, the dateline looks as it does today.</li>
+      <li>A clause added to the Games standfirst. This text stays after the re-read is done.</li>
+    </ul>
+  </div>
+  <div id="frames"></div>
+</main>
+<script src="kit.js"></script>
+<script>
+const { ACCOUNTS, JUST, openings, games, notice, frame } = Kit
+document.getElementById('frames').innerHTML = [
+  frame(1, 'While it runs',
+    openings({ mast: { dl: `${ACCOUNTS} · <span class="new">reading older games again, once</span>`, button: 'Checking…', busy: true } }),
+    '<b>The dateline changes.</b> The time since the last sync gives way to what is happening. The link keeps saying <i>Checking…</i> so the two don\'t repeat each other. The dateline uses small capitals, so the wording has to stay short. The reason goes in the notice.'),
+  frame(2, 'While it runs, one site behind',
+    openings({ mast: { dl: `${ACCOUNTS} · <span class="new">reading older Lichess games again, once</span>`, button: 'Checking…', busy: true } }),
+    'When one site caught up on an earlier sync and the other failed, the dateline names the site still to do.'),
+  frame(3, 'When it finishes',
+    openings({ mast: JUST, notice: notice('3 new games, 1 counted toward a mission. <span class="new">Your 1,184 older games were read again, up to move 30.</span>') }),
+    'The same notice as A. The dateline goes back to <i>synced just now</i>.'),
+  frame(4, 'The Games page',
+    games({ mast: JUST, stand: '214 synced games. Each one is judged once against the mission for the colour you played, <span class="new">and its first 30 moves are kept</span>. Advice is how closely you followed the ideas of the openings you have uncovered; select a score to see why.' }),
+    '<b>Optional, and works with any option.</b> This is the one place a player might wonder how much of each game is kept. A Lichess player\'s games older than their newest 1,000 keep 15 moves. The line doesn\'t mention them, because nothing on screen reads that far yet.', 470),
+].join('')
+Kit.mount('b-dateline.html')
+</script>
+</body>
+</html>

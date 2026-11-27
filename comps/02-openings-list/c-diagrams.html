@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instead of the outline · C · Diagrams</title>
+<link rel="stylesheet" href="../../public/app.css">
+<link rel="stylesheet" href="views.css">
+<link rel="stylesheet" href="kit.css">
+</head>
+<body>
+<div id="top" class="comp" style="padding-bottom:0"></div>
+<main class="comp" style="padding-top:0">
+  <h1>C · Diagrams</h1>
+  <p class="stand">The map's diagrams without the map: tiles set in rows, grouped under the reply they grow from.</p>
+  <div class="why"><p>The map is the part of the screen that looks most like the product, and the outline has none of it. This keeps the diagrams and drops the dragging and zooming. The first moves share a section, then each reply to one heads a section of its own, with its openings in the order they are played.</p><p>The unexplored lines in a section collapse into one dashed tile with a count.</p></div>
+  <section class="fr"><div class="caps"><b>1</b><span>On a laptop</span></div>
+    <div class="shot"><iframe data-opt="c" title="C · Diagrams on a laptop"></iframe></div>
+    <p class="fcap">Small sections sit side by side where there is room. The tiles are the same ones the map and the opening pages already use.</p></section>
+  <section class="fr"><div class="caps"><b>2</b><span>On a phone</span></div>
+    <div class="pair"><div class="shot"><iframe data-opt="c" title="C · Diagrams on a phone"></iframe></div>
+      <div class="notes"><h4>What works</h4><ul><li>Positions are recognisable at a glance, which names in a list are not for newer players.</li><li>Reuses <code>tile()</code> from <code>public/src/lib.js</code>, so it is the least new design to maintain.</li><li>Three diagrams to a row on a phone, and it scrolls the ordinary way instead of panning.</li></ul><h4>What it costs</h4><ul><li>The tallest of the four. Sixteen openings run to about three laptop screens.</li><li>Inside a section the order shows the sequence, but a branch (3.Bc4 or 3.Bb5) looks the same as a continuation.</li><li>It is close to the map, so the two layouts would differ less than they do now.</li></ul><h4>What it needs</h4><ul><li>A new component in place of <code>cb-outline</code>, and a dashed tile for the unexplored count. Nothing new from the server.</li></ul></div></div></section>
+</main>
+<script src="kit.js"></script>
+<script>Comp.mount('c-diagrams.html')</script>
+</body>
+</html>

@@ -1,6 +1,7 @@
 // What a user may do: free up to FREE_OPENINGS uncovered openings, everything with a membership.
 import { GIFT_RENEW_DAYS, MEMBER_STATUSES } from './billing.js'
 import { FREE_OPENINGS } from './missions.js'
+import { FULL_PRICE, earlyPlaces, priceFor } from './pricing.js'
 
 export const FREE_PLAN = { subscribed: false, source: null, until: null, limit: FREE_OPENINGS }
 export const FULL_PLAN = { subscribed: true, source: null, until: null, limit: Infinity }
@@ -28,8 +29,15 @@ export async function activeGift(pool, user) {
 /**
  * The plan for a user row: { subscribed, source, until (unix seconds), limit }, plus
  * the billing details the browser shows. A paid subscription takes precedence over a gift.
+ * `price` is what membership costs this account, in dollars; `full` is there when that is an early-adopter price.
  */
 export async function loadPlan(pool, user, { billing = false } = {}) {
+  const plan = await entitlement(pool, user, billing)
+  const { month, year, early } = priceFor(await earlyPlaces(pool, user.id), plan.source === 'subscription')
+  return { ...plan, price: { month, year, early, ...(early ? { full: FULL_PRICE.month } : {}) } }
+}
+
+async function entitlement(pool, user, billing) {
   const gift = await activeGift(pool, user)
   if (MEMBER_STATUSES.includes(user.subscription_status)) {
     return {

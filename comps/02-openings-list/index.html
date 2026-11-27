@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instead of the outline</title>
+<link rel="stylesheet" href="../../public/app.css">
+<link rel="stylesheet" href="views.css">
+<link rel="stylesheet" href="kit.css">
+</head>
+<body>
+<div id="top" class="comp" style="padding-bottom:0"></div>
+<main class="comp" style="padding-top:0">
+  <h1>Instead of the outline</h1>
+  <p class="stand">Four ways to show the openings as something other than a folding list, for the second layout of the Openings screen.</p>
+  <div class="why">
+    <p>The outline is the layout beside the map, and the one a phone is likely to keep. It shows depth by indenting, hides most openings
+      behind arrows until they are unfolded, and gives every unexplored line a row of its own, so a player with sixteen openings also
+      scrolls past twenty-five rows that say <i>unexplored</i>.</p>
+    <p>Each option below replaces it, and keeps the map as the other layout. All four use the same sample player: sixteen openings
+      uncovered, one active mission for each colour, two parked, and twenty-five lines still unexplored.</p>
+  </div>
+  <ol class="opts">
+    <li><a href="a-lines.html"><b>a</b><b>Lines <span class="caps rec">Suggested</span></b><em>A table with a row for every opening and a column for every turn, like a chess book's index of variations. Keeps the whole tree in view and can be filtered.</em></a></li>
+    <li><a href="b-by-colour.html"><b>b</b><b>By colour</b><em>Two contents lists, White's openings and Black's, sorted by where the mission stands. The shortest, and the only one that gives up the tree.</em></a></li>
+    <li><a href="c-diagrams.html"><b>c</b><b>Diagrams</b><em>The map's tiles set in rows under the reply they grow from. The most visual and the tallest.</em></a></li>
+    <li><a href="d-step-through.html"><b>d</b><b>Step through</b><em>One position at a time, with the moves that leave it listed beneath the board. The best on a phone, with no overview.</em></a></li>
+  </ol>
+  <div class="needs">
+    <span class="caps">The same in every option</span>
+    <ul>
+      <li>The masthead, the sidebar and the map are unchanged. Only the second layout and its name on the switch differ.</li>
+      <li>None needs anything new from the server. Each is a component in <code>public/src/openings.js</code> in place of <code>cb-outline</code>.</li>
+      <li>Accounts that saved <code>outline</code> as their layout need that value kept or mapped to the new one, in <code>routes/settings.js</code> and <code>services/store.js</code>.</li>
+      <li>Unexplored lines are counted instead of listed, in all four.</li>
+      <li>The layout is saved for each kind of device, so two could ship: A on laptops and D on phones is the pairing I would try first.</li>
+      <li>D is live in its frames, and so are A's filters. Other links go nowhere.</li>
+    </ul>
+  </div>
+</main>
+<script src="kit.js"></script>
+<script>Comp.mount('index.html')</script>
+</body>
+</html>

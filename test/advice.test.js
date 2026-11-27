@@ -40,6 +40,14 @@ test('play: a move by a deadline, and no verdict when the game ends first', () =
   assert.equal(run(castle, 'e4 e5 Nf3 Nc6 Bc4 Bc5').status, 'na', 'six plies cannot show whether you castle by move 10')
 })
 
+test('a deadline can be as late as move 20, judged on a game that long', () => {
+  const late = { play: 'castle', by: 20 }
+  const shuffle = (n) => Array.from({ length: n }, (_, i) => ['Nf3', 'Nf6', 'Ng1', 'Ng8'][i % 4]).join(' ')
+  assert.equal(run(late, `e4 e5 ${shuffle(32)} Be2 Be7 Nf3 Nf6 O-O O-O`).status, 'pass', 'castled on move 20 of a 40-ply game')
+  assert.equal(run(late, `e4 e5 ${shuffle(38)}`).status, 'fail', '40 plies without castling')
+  assert.equal(run(late, `e4 e5 ${shuffle(28)}`).status, 'na', 'a game kept to move 15 cannot show it')
+})
+
 test('first/then: order matters, and it does not apply when neither happened', () => {
   const order = { first: 'N*', then: 'B*' }
   assert.equal(run(order, GOOD).status, 'pass')
@@ -87,7 +95,7 @@ test('move tokens ignore check marks and disambiguation', () => {
 test('a bad check in the tree is rejected with a useful message', () => {
   assert.throws(() => compileCheck({ play: 'Zz9', by: 3 }, 'kp'), /not a move/)
   assert.throws(() => compileCheck({ play: 'O-O' }, 'kp'), /by or within/)
-  assert.throws(() => compileCheck({ play: 'O-O', by: 16 }, 'kp'), /stored/)
+  assert.throws(() => compileCheck({ play: 'O-O', by: 31 }, 'kp'), /1 to 30.*stored/)
   assert.throws(() => compileCheck({ play: 'O-O', avoid: 'f3', by: 5 }, 'kp'), /exactly one/)
 })
 
@@ -112,7 +120,7 @@ test('games from before an opening was uncovered are not scored', () => {
   assert.equal(gameAdvice(tree, p, game(BAD, { timeClass: 'bullet' })), null, 'ineligible games are left out too')
 })
 
-test('four poor games start an advice mission; four good ones finish it', () => {
+test('four poor games start an advice mission; it is done when the last four average the target again', () => {
   const p = fresh()
   const games = [game(GOOD), game(BAD), game(BAD), game(BAD)]
   processGames(tree, p, games)
@@ -131,20 +139,21 @@ test('four poor games start an advice mission; four good ones finish it', () => 
   // Nothing new: running again changes nothing.
   assert.deepEqual(updateAdviceMissions(tree, p, games), [])
 
-  // Three good games are not enough, whatever the rolling average says.
-  games.push(game(GOOD), game(GOOD), game(GOOD))
+  // Two good games bring the last four to 50%, which is still short.
+  games.push(game(GOOD), game(GOOD))
   assert.deepEqual(updateAdviceMissions(tree, p, games), [])
   view = stateView(tree, p, games)
-  assert.deepEqual([view.missions.advice[0].played, view.missions.advice[0].current], [3, 100])
+  assert.deepEqual([view.missions.advice[0].played, view.missions.advice[0].current], [2, 50])
 
+  // A third makes it 75%, with a poor game still among the four.
   games.push(game(GOOD))
   events = updateAdviceMissions(tree, p, games)
-  assert.deepEqual(events.map((e) => [e.type, e.average]), [['advice_done', 100]])
+  assert.deepEqual(events.map((e) => [e.type, e.average]), [['advice_done', 75]])
   assert.equal(p.advice.missions.kp.status, 'done')
   assert.equal(stateView(tree, p, games).missions.advice.length, 0)
 
-  // It can come back if the next four slip again.
-  games.push(game(BAD), game(BAD), game(BAD))
+  // It can come back if the last four slip again.
+  games.push(game(BAD), game(BAD))
   events = updateAdviceMissions(tree, p, games)
   assert.deepEqual(events.map((e) => e.type), ['advice_started'])
   assert.equal(p.advice.missions.kp.rounds, 2)

@@ -79,6 +79,12 @@ function fakeSites({ lichess = [], chesscom = {}, lichessStatus = 200 } = {}) {
   return { impl, calls }
 }
 
+test('Lichess games are trimmed to the first 30 moves, and shorter games are kept whole', () => {
+  const moves = (n) => Array.from({ length: n }, (_, i) => `m${i}`).join(' ')
+  assert.equal(trimGame(raw({ moves: moves(90) })).moves.length, 60)
+  assert.equal(trimGame(raw({ moves: moves(41) })).moves.length, 41)
+})
+
 test('pullGames takes the newest Lichess games first, then only what is new', async () => {
   const { store } = await testStore()
   const settings = { usernames: { lichess: 'dtex' } }

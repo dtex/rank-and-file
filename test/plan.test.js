@@ -44,15 +44,15 @@ function finish(p, side) {
   p.slots[side] = null
 }
 
-test('a free player keeps the two starting openings and can uncover four more', () => {
+test('a free player keeps the two starting openings and can uncover two more', () => {
   const p = uncover(fresh(FREE_OPENINGS), FREE_OPENINGS, FREE_OPENINGS)
-  assert.equal(uncoveredCount(p), 6)
+  assert.equal(uncoveredCount(p), FREE_OPENINGS)
   finish(p, 'w')
   assert.equal(fillSlots(tree, p, T0 + 999, FREE_OPENINGS).length, 0)
-  assert.equal(uncoveredCount(p), 6)
+  assert.equal(uncoveredCount(p), FREE_OPENINGS)
   // The same finished mission uncovers the next opening with a membership.
   assert.equal(fillSlots(tree, p, T0 + 999, Infinity).length, 1)
-  assert.equal(uncoveredCount(p), 7)
+  assert.equal(uncoveredCount(p), FREE_OPENINGS + 1)
 })
 
 test('at the free limit a finished mission leaves its slot empty and says why', () => {
@@ -68,21 +68,21 @@ test('at the free limit a finished mission leaves its slot empty and says why', 
 
   const view = stateView(tree, p, games, FREE_PLAN)
   assert.equal(view.events[0].paywall, true)
-  assert.deepEqual([view.plan.uncovered, view.plan.limit, view.plan.atLimit, view.plan.subscribed], [6, 6, true, false])
+  assert.deepEqual([view.plan.uncovered, view.plan.limit, view.plan.atLimit, view.plan.subscribed], [FREE_OPENINGS, FREE_OPENINGS, true, false])
 })
 
-test('when a membership ends, only the first six openings stay open; the rest return intact on resubscribing', () => {
-  const p = uncover(fresh(), 9)
+test('when a membership ends, only the first four openings stay open; the rest return intact on resubscribing', () => {
+  const p = uncover(fresh(), FREE_OPENINGS + 3)
   const order = Object.entries(p.missions).sort((a, b) => a[1].startedAt - b[1].startedAt).map(([id]) => id)
-  const kept = order.slice(0, 6)
-  const extra = order.slice(6)
+  const kept = order.slice(0, FREE_OPENINGS)
+  const extra = order.slice(FREE_OPENINGS)
   p.missions[extra[0]].games.push('g-a', 'g-b')
   const before = structuredClone(p)
 
   assert.equal(applyEntitlement(tree, p, false, T0 + 10000), true)
   assert.deepEqual(extra.map((id) => p.missions[id].status), ['locked', 'locked', 'locked'])
-  assert.deepEqual(kept.map((id) => isUncovered(p, id)), Array(6).fill(true))
-  assert.equal(uncoveredCount(p), 6)
+  assert.deepEqual(kept.map((id) => isUncovered(p, id)), Array(FREE_OPENINGS).fill(true))
+  assert.equal(uncoveredCount(p), FREE_OPENINGS)
   assert.deepEqual(p.missions[extra[0]].games, ['g-a', 'g-b'], 'counts are kept')
   for (const side of ['w', 'b']) assert.ok(!extra.includes(p.slots[side]), 'no slot points at a locked opening')
   assert.equal(applyEntitlement(tree, p, false, T0 + 10001), false, 'running it again changes nothing')
@@ -107,7 +107,7 @@ test('when a membership ends, only the first six openings stay open; the rest re
   assert.notEqual(during.verdict.type, 'counted')
 
   assert.equal(applyEntitlement(tree, p, true, T0 + 12000), true)
-  assert.equal(uncoveredCount(p), 9)
+  assert.equal(uncoveredCount(p), FREE_OPENINGS + 3)
   for (const id of extra) {
     assert.equal(p.missions[id].status, before.missions[id].status, `${id} is ${before.missions[id].status} again`)
     assert.equal('lockedFrom' in p.missions[id], false)
@@ -123,23 +123,23 @@ test('when a membership ends, only the first six openings stay open; the rest re
 
 test('a colour whose mission was locked falls back to a parked free one', () => {
   const p = fresh()
-  // kp parked, qp active: both among the first six.
+  // kp parked, qp active: both among the first four.
   p.missions.kp.status = 'parked'
   p.missions.qp = { status: 'active', side: 'w', startedAt: T0 + 10, since: T0 + 10, games: [] }
   p.slots.w = 'qp'
-  uncover(p, 6)
-  // A seventh opening for White becomes the active mission.
+  uncover(p, FREE_OPENINGS)
+  // A fifth opening for White becomes the active mission.
   finish(p, 'w')
-  const [seventh] = fillSlots(tree, p, T0 + 500)
+  const [fifth] = fillSlots(tree, p, T0 + 500)
   assert.equal(p.missions.kp.status, 'parked')
 
   applyEntitlement(tree, p, false, T0 + 1000)
-  assert.equal(p.missions[seventh.id].status, 'locked')
+  assert.equal(p.missions[fifth.id].status, 'locked')
   assert.equal(p.slots.w, 'kp')
   assert.equal(p.missions.kp.status, 'active')
 
   applyEntitlement(tree, p, true, T0 + 2000)
-  assert.equal(p.slots.w, seventh.id, 'the locked mission takes its slot back')
+  assert.equal(p.slots.w, fifth.id, 'the locked mission takes its slot back')
   assert.equal(p.missions.kp.status, 'parked')
 })
 
@@ -184,21 +184,21 @@ test('the API enforces the free limit and unlocks with a gift', async () => {
   const c = await signIn(ctx, email)
   const store = ctx.app.ctx.store.forUser(c.userId)
 
-  // Put the account at seven openings, as if a membership had just ended.
+  // Put the account at five openings, as if a membership had just ended.
   await c.get('/api/state')
   const start = await store.loadProgress()
   // The helper's clock starts at T0, so move the two starting missions there too.
   for (const m of Object.values(start.missions)) m.startedAt = T0
-  const p = uncover(start, 7)
-  const seventh = Object.entries(p.missions).sort((a, b) => b[1].startedAt - a[1].startedAt)[0][0]
+  const p = uncover(start, FREE_OPENINGS + 1)
+  const fifth = Object.entries(p.missions).sort((a, b) => b[1].startedAt - a[1].startedAt)[0][0]
   await store.saveProgress(p)
 
   const state = (await c.get('/api/state')).json()
-  assert.deepEqual([state.plan.uncovered, state.plan.atLimit, state.plan.locked], [6, true, 1])
-  assert.equal(state.nodes.some((x) => x.id === seventh), false)
-  const opening = await c.get(`/api/openings/${seventh}`)
+  assert.deepEqual([state.plan.uncovered, state.plan.atLimit, state.plan.locked], [FREE_OPENINGS, true, 1])
+  assert.equal(state.nodes.some((x) => x.id === fifth), false)
+  const opening = await c.get(`/api/openings/${fifth}`)
   assert.deepEqual([opening.statusCode, opening.json().paywall], [402, true])
-  const blocked = await c.post('/api/missions/switch', { id: seventh })
+  const blocked = await c.post('/api/missions/switch', { id: fifth })
   assert.deepEqual([blocked.statusCode, blocked.json().paywall], [402, true])
   // A fog tile cannot be chosen, by its tile id or by guessing the opening's id.
   assert.equal((await c.post('/api/missions/switch', { fid: state.fog[0].fid })).statusCode, 400)
@@ -206,6 +206,6 @@ test('the API enforces the free limit and unlocks with a gift', async () => {
 
   await grantGift(ctx.pool, { email })
   const open = (await c.get('/api/state')).json()
-  assert.deepEqual([open.plan.subscribed, open.plan.uncovered, open.plan.locked], [true, 7, 0])
-  assert.equal((await c.get(`/api/openings/${seventh}`)).statusCode, 200)
+  assert.deepEqual([open.plan.subscribed, open.plan.uncovered, open.plan.locked], [true, FREE_OPENINGS + 1, 0])
+  assert.equal((await c.get(`/api/openings/${fifth}`)).statusCode, 200)
 })

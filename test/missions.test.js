@@ -1,10 +1,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { loadTree } from '../services/tree.js'
+import fs from 'node:fs'
+import { TREE_FILE, buildTree } from '../services/tree.js'
 import { candidates, fillSlots, processGames, switchMission } from '../services/missions.js'
 import { fogId, openingView, stateView } from '../services/views.js'
 
-const tree = loadTree()
+// The real map without popularity figures, so what is uncovered next follows map order and these tests do not move with each new sample.
+const tree = buildTree(JSON.parse(fs.readFileSync(TREE_FILE, 'utf8')))
 const T0 = 1795000000
 let n = 0
 const game = (moves, { as = 'w', ...over } = {}) => {
@@ -52,33 +54,47 @@ test('counting, completion and the next mission', () => {
   assert.equal(p.missions.knight.games.length, 2)
 })
 
-test('the next opening uncovered is the one the recent games reach most', () => {
-  const p = fresh()
-  // History: mostly the Bishop's Opening as White, mostly the Sicilian as Black.
+test('the next opening uncovered is the most popular one on chess.com, whatever the player plays', () => {
+  const raw = [
+    { id: 'start', parent: null, name: 'Start', side: null, moves: '' },
+    { id: 'kp', parent: 'start', name: 'e4', side: 'w', moves: 'e4' },
+    { id: 'open', parent: 'kp', name: 'e5', side: 'b', moves: 'e4 e5' },
+    { id: 'sicilian', parent: 'kp', name: 'c5', side: 'b', moves: 'e4 c5' },
+    { id: 'french', parent: 'kp', name: 'e6', side: 'b', moves: 'e4 e6' },
+    { id: 'knight', parent: 'open', name: 'Nf3', side: 'w', moves: 'e4 e5 Nf3' },
+    { id: 'bishop', parent: 'open', name: 'Bc4', side: 'w', moves: 'e4 e5 Bc4' },
+    { id: 'vienna', parent: 'open', name: 'Nc3', side: 'w', moves: 'e4 e5 Nc3' },
+  ]
+  const small = buildTree(raw, { kp: 900, open: 400, sicilian: 130, french: 80, knight: 200, bishop: 30, vienna: 45 })
+  const start = () => {
+    const progress = { createdAt: T0, settings: { username: 'me', timeClasses: ['blitz'], ratedOnly: true }, missions: {}, slots: { w: null, b: null }, events: [] }
+    fillSlots(small, progress, T0)
+    return progress
+  }
+  const p = start()
+  assert.deepEqual(p.slots, { w: 'kp', b: 'open' })
+  // My own history is all Bishop's Opening and French. It no longer decides anything.
   const history = [
-    ...Array.from({ length: 3 }, (_, i) => game('e4 e5 Bc4', { end: T0 - 900 + i })),
-    game('e4 e5 Nf3', { end: T0 - 800 }),
-    ...Array.from({ length: 3 }, (_, i) => game('e4 c5', { as: 'b', end: T0 - 700 + i })),
-    game('e4 e6', { as: 'b', end: T0 - 600 }),
-    // Reached with the other colour, so it says nothing about what I play.
-    ...Array.from({ length: 5 }, (_, i) => game('e4 e5 Nc3', { as: 'b', end: T0 - 500 + i })),
+    ...Array.from({ length: 5 }, (_, i) => game('e4 e5 Bc4', { end: T0 - 900 + i })),
+    ...Array.from({ length: 5 }, (_, i) => game('e4 e6', { as: 'b', end: T0 - 700 + i })),
   ]
   const white = Array.from({ length: 10 }, () => game('e4 e5'))
   const black = Array.from({ length: 8 }, () => game('e4 e5', { as: 'b' }))
-  const { events } = processGames(tree, p, [...history, ...white, ...black])
-  assert.deepEqual(events.map((e) => e.next), ['bishop', 'sicilian'])
-  assert.deepEqual(p.slots, { w: 'bishop', b: 'sicilian' })
-})
+  const { events } = processGames(small, p, [...history, ...white, ...black])
+  assert.deepEqual(events.map((e) => e.next), ['knight', 'sicilian'])
 
-test('only the last 1000 games decide the next opening', () => {
-  const p = fresh()
-  const old = Array.from({ length: 5 }, (_, i) => game('e4 e5 Bc4', { end: T0 - 5000 + i }))
-  const filler = Array.from({ length: 999 }, (_, i) => game('e4 e5', { as: 'b', end: T0 - 4000 + i }))
-  const recent = game('e4 e5 Nc3', { end: T0 - 10 })
-  p.missions.kp.status = 'done'
+  // The whole frontier is compared, and then the next most popular: the Vienna before the Bishop's Opening.
+  p.missions.knight.status = 'done'
   p.slots.w = null
-  // The five Bishop's Opening games are older than the window; one Vienna game is inside it.
-  assert.equal(fillSlots(tree, p, T0, Infinity, [...old, ...filler, recent])[0].id, 'vienna')
+  assert.equal(fillSlots(small, p, T0 + 1)[0].id, 'vienna')
+
+  // With no figures, or equal ones, the map's own order decides.
+  const plain = buildTree(raw)
+  const q = { createdAt: T0, settings: p.settings, missions: {}, slots: { w: null, b: null }, events: [] }
+  fillSlots(plain, q, T0)
+  q.missions.kp.status = q.missions.open.status = 'done'
+  q.slots = { w: null, b: null }
+  assert.deepEqual(fillSlots(plain, q, T0 + 1).map((n) => n.id), ['knight', 'sicilian'])
 })
 
 test('a game is only judged once', () => {
@@ -128,6 +144,21 @@ test('nobody can choose a hidden opening, not even a fog tile next to their map'
   assert.deepEqual(p, before)
 })
 
+test('the map view lists the moves an opening skips past its parent', () => {
+  const view = stateView(tree, fresh(), [])
+  for (const n of view.nodes.slice(1)) {
+    const node = tree.byId.get(n.id)
+    const gap = node.depth - tree.byId.get(node.parent).depth - 1
+    assert.equal(n.via.length, gap, n.id)
+  }
+  // Van't Kruijs is Black's 1...e5 straight under the starting position: White's 1.e3 is the move in between.
+  const hidden = stateView(tree, fresh(), []).fog.find((f) => f.fid === fogId('vantkruijs'))
+  assert.equal(hidden.skip, 1)
+  const p = fresh()
+  p.missions.vantkruijs = { status: 'parked', games: [] }
+  assert.deepEqual(stateView(tree, p, []).nodes.find((n) => n.id === 'vantkruijs').via, ['1.e3'])
+})
+
 test('the map view never names a hidden opening', () => {
   const p = fresh()
   const hidden = game('e4 c5 Nf3', { as: 'w' })
@@ -139,7 +170,7 @@ test('the map view never names a hidden opening', () => {
   assert.deepEqual(view.latest[0].opening, { hidden: true })
   assert.ok(view.fog.length > 0)
   const tile = view.fog.find((f) => f.fid === fogId('sicilian'))
-  assert.deepEqual(tile, { fid: fogId('sicilian'), parent: 'kp', side: 'b' })
+  assert.deepEqual(tile, { fid: fogId('sicilian'), parent: 'kp', side: 'b', skip: 0 })
   assert.equal(openingView(tree, p, [hidden], 'sicilian'), null)
 })
 
@@ -152,4 +183,14 @@ test('opening view reports reach rate and where other games went', () => {
   assert.equal(v.stats.of, 4)
   assert.deepEqual(v.stats.elsewhere, [{ move: '1.d4', mine: true, count: 2 }])
   assert.deepEqual(v.yourMoves, ['1.e4'])
+})
+
+test('the opening page carries the history, one entry per paragraph', () => {
+  const p = fresh()
+  const v = openingView(tree, p, [], 'kp')
+  assert.deepEqual(v.history, tree.byId.get('kp').history.split('\n\n'))
+  assert.ok(v.history.length >= 1 && v.history.every((para) => para && !para.includes('\n')))
+  // An opening without one gets an empty list, so the page leaves the section out.
+  const bare = { ...tree, byId: new Map([...tree.byId, ['kp', { ...tree.byId.get('kp'), history: undefined }]]) }
+  assert.deepEqual(openingView(bare, p, [], 'kp').history, [])
 })

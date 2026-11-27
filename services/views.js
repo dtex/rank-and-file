@@ -3,8 +3,10 @@
 // the exception: with `admin` set, the views show hidden openings in full.
 import { createHash } from 'node:crypto'
 import { FREE_OPENINGS, candidates, isUncovered, uncoveredCount } from './missions.js'
-import { ADVICE_WINDOW, adviceHistory, adviceThreshold, average, gameAdvice, missionRows } from './advice.js'
-import { describeAccounts, gameSite } from './sites.js'
+import { ADVICE_WINDOW, adviceHistory, adviceThreshold, average, gameAdvice, playedSince } from './advice.js'
+import { describeAccounts, gameSite, usernamesOf } from './sites.js'
+import { openingsLayout, sitesBehind } from './store.js'
+import { BAND, TREND_WINDOW, ratingBands, scoreTrend, struggling } from './stats.js'
 import { deepestNode, deviation, formatMove, ineligibleReason, reached, userResult, userSide } from './matcher.js'
 
 /** Opaque id for a fog tile, so the real id (which names the opening) is not exposed. */
@@ -12,6 +14,12 @@ export const fogId = (id) => createHash('sha1').update(`fog:${id}`).digest('hex'
 
 function movesText(node) {
   return node.plies.map((san, i) => (i % 2 === 0 ? `${i / 2 + 1}.${san}` : san)).join(' ')
+}
+
+/** The moves between an opening and its parent that are not openings themselves, like 1.e3 on the way to 1...e5. */
+function skippedMoves(tree, node) {
+  const from = tree.byId.get(node.parent)?.depth ?? 0
+  return node.plies.slice(from, -1).map((san, i) => formatMove(from + i + 1, san))
 }
 
 function nodeView(node, progress) {
@@ -69,12 +77,14 @@ function adviceView(game, tree, progress, onlyNode = null) {
   return { score: onlyNode ? openings[0]?.score ?? null : a.score, openings }
 }
 
-/** Progress of an advice mission: the games collected since it started and their average. */
+/** Progress of an advice mission: where the average of the last few games stands against the target it has to reach. */
 function adviceMissionView(node, progress, history) {
   const m = progress.advice?.missions[node.id]
   if (!m) return null
-  const rows = m.status === 'active' ? missionRows(history, m) : []
-  return { status: m.status, startAverage: m.average, threshold: m.threshold, played: rows.length, of: ADVICE_WINDOW, current: average(rows) }
+  return {
+    status: m.status, startAverage: m.average, threshold: adviceThreshold(progress.settings), of: ADVICE_WINDOW,
+    played: m.status === 'active' ? playedSince(history, m) : 0, current: average(history.slice(-ADVICE_WINDOW)),
+  }
 }
 
 function gameView(game, tree, progress, adviceFor = null) {
@@ -129,9 +139,15 @@ export function planView(plan, progress = null) {
 
 export function stateView(tree, progress, games, plan = { subscribed: true, source: null, until: null, limit: Infinity }, admin = false) {
   const nodes = [nodeView(tree.root, progress)]
-  for (const n of tree.nodes) if (isUncovered(progress, n.id)) nodes.push(nodeView(n, progress))
+  for (const n of tree.nodes) {
+    if (!isUncovered(progress, n.id)) continue
+    // Set where the player scores badly against stronger opponents: the outline marks it with the figure.
+    const { stronger } = ratingBands(n, games, progress.settings)
+    // `via` lets the map give each skipped move a column of its own, so every column is one turn.
+    nodes.push({ ...nodeView(n, progress), via: skippedMoves(tree, n), struggling: struggling({ stronger }) ? { score: stronger.score, games: stronger.games } : null })
+  }
   // An admin's tiles carry the real id, so they can link to the opening's page.
-  const fog = candidates(tree, progress).map((n) => ({ fid: fogId(n.id), parent: n.parent, side: n.side, ...(admin ? { id: n.id } : {}) }))
+  const fog = candidates(tree, progress).map((n) => ({ fid: fogId(n.id), parent: n.parent, side: n.side, skip: skippedMoves(tree, n).length, ...(admin ? { id: n.id } : {}) }))
 
   const missions = {}
   for (const side of ['w', 'b']) {
@@ -179,7 +195,9 @@ export function stateView(tree, progress, games, plan = { subscribed: true, sour
   return {
     accounts: describeAccounts(progress.settings),
     adviceThreshold: adviceThreshold(progress.settings),
+    openingsLayout: openingsLayout(progress.settings),
     lastSync: progress.lastSync,
+    catchingUp: catchingUp(progress),
     plan: planView(plan, progress),
     nodes,
     fog,
@@ -190,13 +208,30 @@ export function stateView(tree, progress, games, plan = { subscribed: true, sour
   }
 }
 
+function byRatingView(node, games, settings) {
+  const bands = ratingBands(node, games, settings)
+  return { ...bands, band: BAND, struggling: struggling(bands) }
+}
+
+function trendView(node, games, settings) {
+  const t = scoreTrend(node, games, settings)
+  return t && { ...t, window: TREND_WINDOW }
+}
+
+/**
+ * Set while the next sync has older games to fetch again, which makes it slow. `site` names
+ * the one site that is behind when the user follows another that is not.
+ */
+function catchingUp(progress) {
+  const behind = sitesBehind(progress)
+  if (!behind.length) return null
+  const followed = Object.values(usernamesOf(progress.settings)).filter(Boolean).length
+  return { site: behind.length < followed ? behind[0] : null }
+}
+
 export function gamesView(tree, progress, games, limit = 300) {
   const list = games.slice(-limit).reverse().map((g) => gameView(g, tree, progress))
   return { games: list, total: games.length, adviceThreshold: adviceThreshold(progress.settings) }
-}
-
-export function openingsView(tree, progress) {
-  return { openings: tree.nodes.filter((n) => isUncovered(progress, n.id)).map((n) => nodeView(n, progress)) }
 }
 
 /**
@@ -237,6 +272,8 @@ export function openingView(tree, progress, games, id, admin = false) {
   return {
     ...peek(node),
     blurb: node.blurb ?? '',
+    // The story of the opening and its name, one entry per paragraph.
+    history: (node.history ?? '').split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean),
     ideas: ideaStats(node, history),
     advice: {
       average: average(history.slice(-ADVICE_WINDOW)),
@@ -254,6 +291,9 @@ export function openingView(tree, progress, games, id, admin = false) {
       record,
       elsewhere: [...elsewhere.values()].sort((a, b) => b.count - a.count).slice(0, 7),
       missed: pool.length - hit.length,
+      // Results by how the opponent's rating compared with the player's, and whether the score is moving.
+      byRating: byRatingView(node, games, settings),
+      trend: trendView(node, games, settings),
     },
     missionGames: (hidden ? [] : mission.games).map((u) => byUuid.get(u)).filter(Boolean).reverse().map((g) => gameView(g, tree, progress)),
     children: node.children.filter((c) => admin || isUncovered(progress, c.id)).map(peek),
