@@ -170,6 +170,8 @@ export class Sample {
     this.sites = {}
     this.running = {}
     this.counts = {}
+    /** Called with the site's key each time a new sample for it is in. */
+    this.onRefresh = null
     for (const site of Object.keys(SITES)) this.sites[site] = { fetchedAt: null, games: [] }
     try {
       const saved = JSON.parse(fs.readFileSync(file, 'utf8'))
@@ -232,6 +234,7 @@ export class Sample {
       delete this.counts[site]
       this.save()
       this.running[site] = null
+      this.onRefresh?.(site)
     } catch (err) {
       state.error = err.message
     }

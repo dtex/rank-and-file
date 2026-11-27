@@ -15,7 +15,8 @@
     "gift": "node scripts/gift.js",
     "marketing-list": "node scripts/marketing-list.js",
     "tree:check": "node scripts/build-tree.js",
-    "openings": "node tools/openings/server.js"
+    "openings": "node tools/openings/server.js",
+    "popularity": "node tools/openings/popularity.js"
   },
   "engines": {
     "node": ">=20.0.0"

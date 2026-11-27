@@ -2,7 +2,7 @@
 // Every figure quoted here comes from the code that enforces it, so the pages cannot drift from the app.
 import { readFileSync } from 'node:fs'
 import { ADVICE_WINDOW } from '../services/advice.js'
-import { FREE_OPENINGS, RANK_WINDOW } from '../services/missions.js'
+import { FREE_OPENINGS } from '../services/missions.js'
 import { APP_PATH, NAV, SITE_NAME, TAGLINE, boardHtml, esc, faq, pipsHtml, sitePage } from '../services/site.js'
 import { EARLY_PLACES, EARLY_PRICE, FULL_PRICE, earlyPlaces, priceFor } from '../services/pricing.js'
 import { DEFAULT_SETTINGS } from '../services/store.js'
@@ -58,13 +58,13 @@ const HOME_FAQ = [
   ['Do I need an account on chess.com or Lichess to use Rank and File?',
     `Yes, on at least one of them. Rank and File tracks missions against games you play there, so it needs a username with games on it. You never give Rank and File your password to either site; it reads only public game records.`],
   ['Can I use Rank and File if I play on both chess.com and Lichess?',
-    `Yes. Enter both usernames in Settings and your games from the two sites are combined: they count toward the same missions, the same advice scores and the same choice of next opening. Adding the second site later keeps your progress.`],
+    `Yes. Enter both usernames in Settings and your games from the two sites are combined: they count toward the same missions and the same advice scores. Adding the second site later keeps your progress.`],
   ['Is Rank and File allowed under chess.com and Lichess fair play rules?',
     `Rank and File is a study aid for after your games. It reads only finished games and gives no help in a game in progress. Looking at opening advice from any source while a game is being played would break the fair play rules of both sites, so use it between games.`],
   ['Who is Rank and File for?',
     `Rank and File is for beginners and club players who want a sound opening repertoire without memorising long lines of theory. It teaches a few ideas per opening and has you practise them in real games, one opening at a time. You must be 16 or older to have an account.`],
   ['How is Rank and File different from an opening trainer or a course?',
-    `Most opening trainers drill moves against a computer. Rank and File has no drills: your own rated games are the practice, and the app measures whether you reached the opening and followed its ideas. You do not choose the next opening either; it is the one your recent games reach most often.`],
+    `Most opening trainers drill moves against a computer. Rank and File has no drills: your own rated games are the practice, and the app measures whether you reached the opening and followed its ideas. You do not choose the next opening either; it is the one played most often on chess.com.`],
   ['Is Rank and File affiliated with chess.com or Lichess?',
     `No. Rank and File is independent and is not affiliated with or endorsed by chess.com or Lichess. It uses the public game records both sites make available.`],
 ]
@@ -73,9 +73,9 @@ const FEATURES_FAQ = [
   ['Which chess openings does Rank and File cover?',
     `Rank and File covers ${OPENINGS} openings and variations for White and Black. They include the Italian Game, Ruy Lopez, Scotch Game, Sicilian Defense, French Defense, Caro-Kann Defense, Scandinavian Defense, Queen's Gambit, Slav Defense, London System, King's Indian setup, Dutch Defense, English Opening and Réti Opening.`],
   ['How does Rank and File choose which opening I learn next?',
-    `When you complete a mission, Rank and File looks at the hidden openings next to the ones you have uncovered and picks the one your last ${RANK_WINDOW.toLocaleString('en-US')} games reached most often with that colour. If your games give it nothing to go on, it follows the main lines of the map.`],
+    `When you complete a mission, Rank and File looks at the hidden openings next to the ones you have uncovered and picks the one that is reached most often in recent games on chess.com. Where the figures do not separate two openings, it follows the main lines of the map.`],
   ['Can I choose which opening to study next?',
-    `No. The next opening is always the one you meet most often in your own games, so you study what you will actually face. You can return to any opening you have already uncovered.`],
+    `No. The next opening is always the most popular one on chess.com that you have not yet uncovered, so you study what you are most likely to face. You can return to any opening you have already uncovered.`],
   ['How many games does it take to complete an opening mission?',
     `Between ${TARGET_MIN} and ${TARGET_MAX} games. A first move such as 1.e4 needs ${TARGET_MAX} games, a second move needs ${targetFor(2)}, and deeper lines need fewer because reaching them depends more on your opponent. Only games finished after the mission started count.`],
   ['What is advice accuracy?',
@@ -134,7 +134,7 @@ function home(config) {
       <ol class="steps">
         <li><b>1</b><div><h3>Tell it where you play</h3><p>Sign in with Google, GitHub or a link sent to your email, then enter your username on chess.com, Lichess or both. Rank and File reads the finished games those sites publish for it. It never asks for a password to either.</p></div></li>
         <li><b>2</b><div><h3>Play your normal games</h3><p>You have one mission for White and one for Black. Every game that reaches your mission opening counts, win or lose, and is scored on how well you followed that opening's ideas.</p></div></li>
-        <li><b>3</b><div><h3>Uncover the next opening</h3><p>Complete a mission and a new opening appears on your map: the one your own games reach most often. You always study what you actually face.</p></div></li>
+        <li><b>3</b><div><h3>Uncover the next opening</h3><p>Complete a mission and a new opening appears on your map: the one played most often on chess.com. You always study what you are most likely to face.</p></div></li>
       </ol>
     </section>
 
@@ -201,9 +201,9 @@ function features(config) {
     ${feature('The map', `${OPENINGS} openings, uncovered as you go`,
       `<p>Every opening is a captioned diagram on one map, joined to the opening it grows from. The ones you have not reached yet stay under fog. Completing a mission uncovers the next.</p>
        <p>The map runs from 1.e4 and 1.d4 to the Italian Game, Ruy Lopez, Sicilian, French, Caro-Kann, Queen's Gambit, London System and more.</p>`)}
-    ${feature('What comes next', 'Your games choose the next opening',
-      `<p>Nobody picks their next opening by hand. Of the hidden openings next to what you have uncovered, Rank and File takes the one your last ${RANK_WINDOW.toLocaleString('en-US')} games reached most often with that colour.</p>
-       <p>If your opponents keep answering 1.e4 with the Sicilian, the Sicilian is what you study next.</p>`)}
+    ${feature('What comes next', 'The most popular opening comes next',
+      `<p>Nobody picks their next opening by hand. Of the hidden openings next to what you have uncovered, Rank and File takes the one reached most often in recent games on chess.com.</p>
+       <p>More players there answer 1.e4 e5 2.Nf3 with 2...Nc6 than with anything else, so that is what you study before the sidelines.</p>`)}
     ${feature('Ideas', 'A few ideas for each opening',
       `<p>Each opening has a study page with its position, the moves that reach it, and a short list of ideas written for players who do not want to memorise theory. These are the ideas for the ${esc(open.name)}, played as Black:</p>`,
       `<ol class="ideas">${open.ideas.map((t, i) => `<li><b>${i + 1}</b><div>${esc(t)}</div></li>`).join('')}</ol>`)}
@@ -218,7 +218,7 @@ function features(config) {
     ${feature('Your record', 'How each opening is going',
       `<p>An opening's study page shows how often your games reach it, your wins, draws and losses from it, how often you followed each idea, and where your other games went instead.</p>`)}
     ${feature('Two sites', 'chess.com and Lichess, together',
-      `<p>Give your username on chess.com, on Lichess, or on both. Games from the two sites are combined, so a mission moves forward wherever you happen to play, and the next opening is chosen from all of your games.</p>
+      `<p>Give your username on chess.com, on Lichess, or on both. Games from the two sites are combined, so a mission moves forward wherever you happen to play.</p>
        <p>You can start with one site and add the other later without losing progress. The game log says which site each game came from and links to it there.</p>`)}
     ${feature('Settings', 'Count the games you care about',
       `<p>Choose which time controls count toward missions: bullet, blitz, rapid and daily. Count rated games only, or unrated ones too. Chess960 and games from a set position never count.</p>`)}

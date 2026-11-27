@@ -68,7 +68,7 @@ class CbOutline extends View {
       // Only an admin's rows carry an id: they open the study page without uncovering anything.
       return html`<li class="ofog"><span class="twist" aria-hidden="true"></span>${f.id
         ? html`<a href="#opening-${f.id}" title="View this hidden opening's page">${label}</a>`
-        : html`<span title="Finishing a mission uncovers the hidden opening your games reach most.">${label}</span>`}</li>`
+        : html`<span title="Finishing a mission uncovers the hidden opening that is most popular on chess.com.">${label}</span>`}</li>`
     }
     const n = it.node
     const open = this.open.has(n.id)

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { TREE_FILE, loadTree } from '../services/tree.js'
+import { TREE_FILE, loadTree, popularityFileFor } from '../services/tree.js'
 import { addOpening, deleteOpening, formatTree, newId, readTree, updateOpening } from '../tools/openings/tree-file.js'
 import { PER_PLAYER, Sample, crawl, lichessArenas } from '../tools/openings/sample.js'
 import { buildServer } from '../tools/openings/server.js'
@@ -137,6 +137,31 @@ test('the editor saves through its API and the app can load the result', async (
 
   const gone = await call(app, 'DELETE', `/api/openings/${id}`)
   assert.equal(gone.body.openings.some((o) => o.id === id), false)
+})
+
+test('the chess.com figures are written beside the map for the app, on every save and every new chess.com sample', async () => {
+  const file = copy()
+  const figures = popularityFileFor(file)
+  fs.rmSync(figures, { force: true })
+  const sample = sampleOf([game('e4 e5 Nf3'), game('e4 c5'), game('d4 d5'), game('Nf3 e5 e4')], [game('e4 e5'), game('e4 e5')])
+  const app = buildServer({ file, sample })
+  assert.equal(loadTree(file).byId.get('kp').popularity, 0, 'no figures until the editor writes them')
+
+  const added = await call(app, 'POST', '/api/openings', { parent: 'kp', name: 'St. George Defence', side: 'b', moves: 'e4 a6' })
+  const written = JSON.parse(fs.readFileSync(figures, 'utf8'))
+  assert.deepEqual([written.site, written.games, written.sampledAt], ['chess.com', 4, new Date(NOW).toISOString()])
+  assert.deepEqual(Object.keys(written.reached), readTree(file).slice(1).map((x) => x.id), 'every opening, in map order')
+  // chess.com's games only, and by any move order: 1.e4 e5 2.Nf3 is reached twice, 1.e4 e5 once, whatever Lichess has.
+  const tree = loadTree(file)
+  assert.deepEqual(['kp', 'open', 'knight', 'sicilian', 'qp', added.body.id].map((id) => tree.byId.get(id).popularity), [2, 1, 2, 1, 1, 0])
+
+  await sample.refresh({ sources: { chesscom: async () => [game('e4 a6'), game('e4 a6')], lichess: async () => [game('d4')] }, now: NOW })
+  assert.equal(loadTree(file).byId.get(added.body.id).popularity, 2)
+
+  // Without a chess.com sample the figures on disk are kept.
+  const empty = buildServer({ file, sample: sampleOf([]) })
+  await call(empty, 'DELETE', `/api/openings/${added.body.id}`)
+  assert.equal(JSON.parse(fs.readFileSync(figures, 'utf8')).games, 2)
 })
 
 test('a line can be tried before it is saved', async () => {

@@ -29,7 +29,7 @@ export async function loadState({ store, plan = FULL_PLAN }) {
   }
   const relocked = applyEntitlement(getTree(), progress, plan.subscribed, now())
   const games = await store.loadAllGames()
-  const started = fillSlots(getTree(), progress, now(), plan.limit, games)
+  const started = fillSlots(getTree(), progress, now(), plan.limit)
   if (relocked || started.length) await store.saveProgress(progress)
   return { tree: getTree(), progress, games }
 }

@@ -201,7 +201,7 @@ class CbApp extends View {
                   <button class="pri" @click=${() => this.dismissEvent(event)}>Back to your openings</button>
                   <button @click=${() => this.dismissEvent(event, `opening-${next.id}`)}>Study it</button>
                 </div>
-                <p class="muted" style="margin-top:12px">It was chosen because, of the hidden ${sideName(next.side)} openings next to your map, it is the one your recent games reach most.</p>`
+                <p class="muted" style="margin-top:12px">It was chosen because, of the hidden ${sideName(next.side)} openings next to your map, it is the one played most often on chess.com.</p>`
             : event.paywall
               ? html`<h3 style="margin-top:16px">That was your last free opening</h3>
                 <p>You have uncovered all ${this.state.plan.freeOpenings} free openings, and they stay yours to play. A membership uncovers the rest of the map.</p>

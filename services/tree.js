@@ -1,4 +1,5 @@
-// Loads data/tree.json and works out each opening's target position.
+// Loads data/tree.json and works out each opening's target position. Beside it,
+// data/popularity.json says how often each opening is reached on chess.com.
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -7,6 +8,25 @@ import { compileCheck } from './checks.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 export const TREE_FILE = path.join(ROOT, 'data', 'tree.json')
+
+/** The popularity figures for a tree file are kept next to it. */
+export const popularityFileFor = (treeFile) => path.join(path.dirname(treeFile), 'popularity.json')
+
+/**
+ * The file's `reached`: for each opening id, how many games of a sample of recent
+ * chess.com games reached it. The openings editor writes the file (tools/openings/popularity.js).
+ * Empty when there is no file yet.
+ */
+export function readPopularity(file) {
+  let text
+  try {
+    text = fs.readFileSync(file, 'utf8')
+  } catch (err) {
+    if (err.code === 'ENOENT') return {}
+    throw err
+  }
+  return JSON.parse(text).reached ?? {}
+}
 
 /** Board, side to move and castling rights. Move counters and en passant are ignored so transpositions match. */
 export function positionKey(fen) {
@@ -23,7 +43,8 @@ export function targetFor(depth) {
   return 3
 }
 
-export function buildTree(raw) {
+/** `popularity` maps an opening's id to how many sampled chess.com games reached it; an opening it leaves out gets 0. */
+export function buildTree(raw, popularity = {}) {
   const byId = new Map()
   const nodes = []
   for (const r of raw) {
@@ -51,6 +72,7 @@ export function buildTree(raw) {
       fen: chess.fen(),
       depth: plies.length,
       target: r.target ?? targetFor(plies.length),
+      popularity: popularity[r.id] ?? 0,
       children: [],
     }
     byId.set(r.id, node)
@@ -83,5 +105,5 @@ export function buildTree(raw) {
 }
 
 export function loadTree(file = TREE_FILE) {
-  return buildTree(JSON.parse(fs.readFileSync(file, 'utf8')))
+  return buildTree(JSON.parse(fs.readFileSync(file, 'utf8')), readPopularity(popularityFileFor(file)))
 }

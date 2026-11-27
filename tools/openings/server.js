@@ -9,6 +9,7 @@ import { Chess } from 'chess.js'
 import { TREE_FILE, positionKey, targetFor } from '../../services/tree.js'
 import { EditError, KNOWN, addOpening, deleteOpening, newId, readTree, updateOpening, validate, writeTree } from './tree-file.js'
 import { RECENT_DAYS, Sample } from './sample.js'
+import { writePopularity } from './popularity.js'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const HOST = '127.0.0.1'
@@ -61,9 +62,14 @@ export function buildServer({ file = TREE_FILE, sample = new Sample(), port = 32
     const tree = validate(raw)
     return { openings: raw.map((r) => view(tree.byId.get(r.id), r, sample)), sample: sample.status(), recentDays: RECENT_DAYS, file }
   }
+  // The app ranks hidden openings by the chess.com figures, so they are written out whenever they could have changed.
   const save = (next) => {
     writeTree(next, file)
+    writePopularity(sample, file)
     return state()
+  }
+  sample.onRefresh = (site) => {
+    if (site === 'chesscom') writePopularity(sample, file)
   }
 
   app.get('/api/tree', async () => state())

@@ -194,7 +194,7 @@ class CbMap extends View {
       const label = html`<b class=${f.side}>?</b>${sideName(f.side)} line, unexplored`
       // Only an admin's tiles carry an id: they open the study page without uncovering anything.
       if (f.id) return html`<a class="fogn" style=${style} href="#opening-${f.id}" draggable="false" title="View this hidden opening's page">${label}</a>`
-      return html`<div class="fogn" style=${style} title="Finishing a mission uncovers the hidden opening your games reach most.">${label}</div>`
+      return html`<div class="fogn" style=${style} title="Finishing a mission uncovers the hidden opening that is most popular on chess.com.">${label}</div>`
     }
     if (it.faint) return html`<div class="via faint" style=${style} title="A move played on the way. It is not an opening of its own here.">${NOT_BOOK}</div>`
     if (it.via) return html`<div class="via" style=${style} title="${it.via} is played on the way. It is not an opening of its own here.">${NOT_BOOK}<span class="mvn">${it.via}</span></div>`

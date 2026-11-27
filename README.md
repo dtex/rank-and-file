@@ -15,9 +15,14 @@ The app itself is one page at `/app`. Sign-in, emailed links and Stripe all retu
 
 You get a mission for one opening per colour, play your normal games on chess.com or Lichess, and the app
 counts the ones that actually reached that opening. Finish a mission and the next opening
-comes out of the fog: of the hidden ones next to what you have uncovered, the one your last
-1,000 games reached most often with that colour. With nothing to go on it follows the map's
-main lines. Nobody picks the next opening themselves.
+comes out of the fog: of the hidden ones next to what you have uncovered, the one most popular
+on chess.com. Where the figures tie it follows the map's main lines. Nobody picks the next
+opening themselves.
+
+The figures are in `data/popularity.json`: for each opening, how many games of a sample of recent
+chess.com games reached it. The openings editor (below) measures them and writes the file, and
+`npm run popularity` writes it again from the sample the editor last gathered. The app reads it
+at start-up; an opening with no figure counts as never reached.
 
 ## chess.com and Lichess
 
@@ -160,6 +165,10 @@ following each player's opponents, six games a player; on Lichess from the arena
 finished in the last hour or two. A game counts for an opening when it passes through that
 position by any move order, as it does for a mission. Treat small percentages as rough: one game
 in 1,500 is 0.07%.
+
+The chess.com figures also decide which opening a player uncovers next, so the editor writes them to
+`data/popularity.json` whenever it saves the map or finishes a new chess.com sample. Commit that
+file with `data/tree.json`.
 
 ## Marketing email
 
