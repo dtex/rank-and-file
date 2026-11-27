@@ -1,0 +1,89 @@
+/* The comps load the app's own stylesheet (../../public/app.css), so every frame is drawn with the real styles.
+   app.css asks for fonts at /fonts/, which a file opened from disk can't reach. The same faces declared again
+   here, later and with relative paths, take over. */
+@font-face { font-family: "Playfair Display"; font-weight: 800; font-style: normal; font-display: swap; src: url("../../public/fonts/playfair-display-latin-800-normal.woff2") format("woff2"); }
+@font-face { font-family: "Playfair Display"; font-weight: 900; font-style: normal; font-display: swap; src: url("../../public/fonts/playfair-display-latin-900-normal.woff2") format("woff2"); }
+@font-face { font-family: "Playfair Display"; font-weight: 500; font-style: italic; font-display: swap; src: url("../../public/fonts/playfair-display-latin-500-italic.woff2") format("woff2"); }
+@font-face { font-family: "Source Serif 4"; font-weight: 400; font-style: normal; font-display: swap; src: url("../../public/fonts/source-serif-4-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Source Serif 4"; font-weight: 400; font-style: italic; font-display: swap; src: url("../../public/fonts/source-serif-4-latin-400-italic.woff2") format("woff2"); }
+@font-face { font-family: "Source Serif 4"; font-weight: 600; font-style: normal; font-display: swap; src: url("../../public/fonts/source-serif-4-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Libre Franklin"; font-weight: 700; font-style: normal; font-display: swap; src: url("../../public/fonts/libre-franklin-latin-700-normal.woff2") format("woff2"); }
+
+/* The pages around the frames: not part of the design being shown. */
+html, body { height: auto; }
+.comp { max-width: 1320px; margin: 0 auto; padding: 28px 24px 90px; }
+.comp-top { display: flex; gap: 12px 28px; align-items: baseline; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 10px; color: var(--muted); }
+.comp-top a { text-decoration: none; }
+.comp-top a.on { color: var(--ink); box-shadow: 0 2px 0 var(--accent); }
+.comp-top .seg button { padding: 5px 9px 4px; }
+.comp-top .grp { display: inline-flex; gap: 14px; align-items: baseline; }
+.comp-top .grp + .grp { border-left: 1px solid var(--line); padding-left: 24px; }
+.comp-top .grp > span:first-child { color: var(--ink); }
+
+/* Phase 2: results by opponent rating, as the options draw them. These would move into public/app.css. */
+.bands { margin-top: 2px; }
+.bands th { border-top: 0; padding-top: 0; }
+.bands td, .bands th { padding-right: 0; }
+.box .bands td { text-align: right; font-weight: 400; }
+.box .bands td:first-child, .bands th:first-child { text-align: left; }
+.box .bands td:last-child { font-weight: 600; }
+.bands th:not(:first-child) { text-align: right; }
+.bands .bad, .box .bands .bad td:last-child { color: var(--bad); }
+.bands .na { color: var(--muted); }
+.trend { font-size: 15px; line-height: 1.35; font-style: italic; margin: 10px 0 0; }
+.trend b { font-style: normal; font-weight: 600; }
+.trend .down { color: var(--bad); }
+/* B: the full table in its own section. */
+.wide-bands { max-width: 780px; }
+.wide-bands td, .wide-bands th { text-align: right; font-variant-numeric: tabular-nums; }
+.wide-bands td:first-child, .wide-bands th:first-child { text-align: left; }
+.wide-bands td:first-child small { color: var(--muted); font-style: italic; font-size: 14px; }
+.wide-bands tr.bad td { color: var(--bad); }
+.wide-bands .meter { width: 120px; display: inline-block; vertical-align: middle; margin-right: 8px; }
+.wide-bands tr.bad .meter s { background: var(--bad); }
+/* C: the score against stronger players as the headline figure. */
+.box .pull.bad { color: var(--bad); }
+.band-row { display: grid; grid-template-columns: 88px 1fr 40px; gap: 10px; align-items: center; margin-bottom: 7px; font-size: 15px; }
+.band-row > span:last-child { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.band-row small { display: block; color: var(--muted); font-size: 13px; font-style: italic; line-height: 1.1; }
+.band-row.bad > span:last-child, .band-row.bad > span:first-child { color: var(--bad); }
+.band-row.bad .meter s { background: var(--bad); }
+/* Outline markers. */
+.ost .vs { color: var(--bad); }
+/* On an active row the status is red too, so a dot keeps the two apart. */
+.ost .vs::after { content: "·"; margin-left: 8px; color: var(--muted); }
+.ost .ring { font: 800 12px/13px var(--head); color: var(--bad); border: 1px solid var(--bad); border-radius: 50%; width: 15px; height: 15px; text-align: center; flex: none; }
+.oname .tough { flex-basis: 100%; padding-left: 15px; font-size: 13px; color: var(--bad); font-style: italic; }
+.comp h1 { font-size: clamp(34px, 4.4vw, 52px); font-weight: 900; letter-spacing: -.012em; margin: 26px 0 8px; }
+.comp .stand { margin-bottom: 14px; }
+.comp .why { max-width: 46em; font-size: 17px; }
+.needs { max-width: 46em; margin: 18px 0 0; border-top: 3px solid var(--ink); padding-top: 6px; }
+.needs ul { margin: 8px 0 0; padding-left: 20px; font-size: 16px; }
+.needs li { margin-bottom: 4px; }
+.needs code, .fcap code { font: 13.5px ui-monospace, Menlo, monospace; }
+
+/* One frame: a slice of the app at its real size, with a label above and notes below. */
+.fr { margin-top: 48px; }
+.fr > .caps { display: flex; gap: 12px; align-items: baseline; }
+.fr > .caps b { color: var(--accent); }
+.shot { margin-top: 10px; border: 1px solid var(--ink); box-shadow: 0 0 0 4px var(--bg), 0 0 0 5px var(--line); overflow: hidden; }
+.app { display: flex; flex-direction: column; height: var(--h, 560px); background: var(--bg); }
+.app .mast { padding-top: 10px; }
+.fcap { max-width: 46em; margin-top: 12px; font-size: 15.5px; color: var(--muted); font-style: italic; }
+.fcap b { color: var(--ink); font-style: normal; font-weight: 600; }
+/* Words that are new in this frame, for the reviewer's eye only. */
+.app .new { background: color-mix(in srgb, var(--accent) 13%, transparent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 13%, transparent); }
+body.clean .app .new { background: none; box-shadow: none; }
+
+/* the index */
+.opts { list-style: none; margin: 26px 0 0; padding: 0; border-top: 3px solid var(--ink); max-width: 980px; }
+.opts a { display: grid; grid-template-columns: 54px 260px 1fr; gap: 14px; padding: 18px 0; border-bottom: 1px solid var(--line); text-decoration: none; align-items: baseline; }
+.opts a > b:first-child { font: italic 500 40px/.8 var(--head); color: var(--accent); }
+.opts a > b:nth-child(2) { font: 800 22px/1.15 var(--head); }
+.opts a:hover > b:nth-child(2) { color: var(--accent); }
+.opts em { font-style: normal; color: var(--muted); }
+.opts .rec { color: var(--accent); }
+@media (max-width: 860px) {
+  .opts a { grid-template-columns: 40px 1fr; }
+  .opts em { grid-column: 2; }
+}

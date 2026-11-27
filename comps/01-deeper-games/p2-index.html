@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phase 2 comps</title>
+<link rel="stylesheet" href="../../public/app.css">
+<link rel="stylesheet" href="kit.css">
+</head>
+<body>
+<div id="top" class="comp" style="padding-bottom:0"></div>
+<main class="comp" style="padding-top:0">
+  <h1>Results by opponent rating</h1>
+  <p class="stand">Phase 2 of <a href="../../design/01-deeper-games-and-rating-stats.md">01-deeper-games-and-rating-stats.md</a>.
+    Three places for the table on an opening's page, each with its own marker in the outline.</p>
+  <div class="why">
+    <p>The design doc puts a six-column table "next to <i>Your record here</i>". That box is 290 pixels wide, which fits about four
+      narrow columns, so the doc's table can't go there as written. A keeps the table in the box with fewer columns. B gives it a
+      full-width section of its own. C leads with the one number the work exists for: how the player scores against stronger opponents.</p>
+    <p>Every frame uses the same player: 45 Sicilian games as Black, 9 of them against opponents rated more than 100 above them, who
+      scored 22%. That makes the opening a struggle.</p>
+  </div>
+  <ol class="opts">
+    <li><a href="p2-a-box.html"><b>a</b><b>In the record box <span class="caps rec">Suggested</span></b><em>Four columns under Won, Drawn and Lost, with W–D–L in one column. The stronger row turns red when the player is struggling. The outline shows the figure: <i>22% v stronger</i>.</em></a></li>
+    <li><a href="p2-b-section.html"><b>b</b><b>A section of its own</b><em>The doc's table in full, with a score bar, in a section after the three columns. Easy to read, but further down the page than the record it explains. The outline gets a line of words under the opening's name.</em></a></li>
+    <li><a href="p2-c-headline.html"><b>c</b><b>The headline figure</b><em>The score against stronger players set as a second large figure in the box, with the three bands drawn as bars underneath. The outline gets a ringed arrow.</em></a></li>
+  </ol>
+  <div class="needs">
+    <span class="caps">The same in every option</span>
+    <ul>
+      <li>The trend line is the same sentence in all three. It appears only with at least 40 games, and the comparison figure turns red when the score has dropped.</li>
+      <li>The map tiles don't get a marker, as the doc says.</li>
+      <li>A shows the doc's open decision on bands: the same table with fixed rating ranges in place of relative bands.</li>
+      <li>None of the options marks the table as members-only. That follows the doc's suggestion to make it free.</li>
+      <li>New styles are in <code>kit.css</code> under "Phase 2" and would move into <code>public/app.css</code>.</li>
+    </ul>
+  </div>
+</main>
+<script src="kit.js"></script>
+<script>Kit.mount('p2-index.html')</script>
+</body>
+</html>

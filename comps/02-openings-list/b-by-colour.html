@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instead of the outline · B · By colour</title>
+<link rel="stylesheet" href="../../public/app.css">
+<link rel="stylesheet" href="views.css">
+<link rel="stylesheet" href="kit.css">
+</head>
+<body>
+<div id="top" class="comp" style="padding-bottom:0"></div>
+<main class="comp" style="padding-top:0">
+  <h1>B · By colour</h1>
+  <p class="stand">Two contents lists, White's openings and Black's, each sorted by where the mission stands. The tree is left to the map.</p>
+  <div class="why"><p>This one drops the tree. It answers a different question from the outline: not <i>how do these openings connect</i> but <i>what am I working on, and what have I finished</i>. Each opening's line of moves is printed at the end of its row, so the connection can still be read, but nothing is nested.</p><p>Unexplored lines become one sentence at the foot of each column.</p></div>
+  <section class="fr"><div class="caps"><b>1</b><span>On a laptop</span></div>
+    <div class="shot"><iframe data-opt="b" title="B · By colour on a laptop"></iframe></div>
+    <p class="fcap">The active mission is set larger than the rest. Parked and complete openings follow under their own labels.</p></section>
+  <section class="fr"><div class="caps"><b>2</b><span>On a phone</span></div>
+    <div class="pair"><div class="shot"><iframe data-opt="b" title="B · By colour on a phone"></iframe></div>
+      <div class="notes"><h4>What works</h4><ul><li>The shortest and calmest of the four. Sixteen openings fit on one laptop screen without scrolling.</li><li>Matches how missions work: one active opening for each colour, with parked ones beside it.</li><li>Stacks cleanly on a phone, White first, then Black.</li></ul><h4>What it costs</h4><ul><li>Says nothing about which opening leads to which, except through the moves. Players would switch to the map for that.</li><li>The active missions appear twice on a laptop, here and in the sidebar.</li><li>Unexplored lines lose their place: the count is for the colour, not for an opening.</li></ul><h4>What it needs</h4><ul><li>A new component in place of <code>cb-outline</code>. Nothing new from the server.</li><li>A decision on the sidebar: either accept the repeat, or let the parked openings' <i>Resume</i> buttons move into this list.</li></ul></div></div></section>
+</main>
+<script src="kit.js"></script>
+<script>Comp.mount('b-by-colour.html')</script>
+</body>
+</html>
