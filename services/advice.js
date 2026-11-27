@@ -6,7 +6,7 @@ import { evaluate } from './checks.js'
 import { gameKeys, ineligibleReason, userSide } from './matcher.js'
 import { DEFAULT_SETTINGS } from './store.js'
 
-/** Games in the rolling average, and games an advice mission asks for. */
+/** Games in the rolling average that starts and finishes an advice mission. */
 export const ADVICE_WINDOW = 4
 
 /** Average accuracy (0 to 100) below which an advice mission starts. 0 switches them off. */
@@ -60,16 +60,14 @@ export function adviceHistory(tree, progress, games, node) {
 
 export const average = (rows) => (rows.length ? Math.round(mean(rows.map((r) => r.score))) : null)
 
-/** The games an active advice mission has collected so far, at most ADVICE_WINDOW. */
-export function missionRows(history, mission) {
-  return history.filter((h) => h.game.end > mission.since).slice(-ADVICE_WINDOW)
-}
+/** How many scored games have been played since an advice mission started. */
+export const playedSince = (history, mission) => history.filter((h) => h.game.end > mission.since).length
 
 /**
  * Start and finish advice missions for games that have not been looked at yet.
  * A mission starts when the last four scored games in an opening average below
- * the threshold, and is done once four games played after that average at or
- * above it. It runs beside the opening missions and never blocks them.
+ * the threshold, and is done as soon as a new game brings the average of the
+ * last four back up to it. It runs beside the opening missions and never blocks them.
  * Mutates `progress`; returns the events it added.
  */
 export function updateAdviceMissions(tree, progress, games) {
@@ -98,21 +96,17 @@ export function updateAdviceMissions(tree, progress, games) {
       const soFar = history.slice(0, i + 1)
       const m = state.missions[id]
       let type = null
-      let avg
+      const rows = soFar.slice(-ADVICE_WINDOW)
+      const avg = average(rows)
+      if (rows.length < ADVICE_WINDOW) return
       if (m?.status === 'active') {
-        const rows = missionRows(soFar, m)
-        avg = average(rows)
-        if (rows.length === ADVICE_WINDOW && avg >= limit) {
+        if (avg >= limit) {
           Object.assign(m, { status: 'done', completedAt: game.end, finalAverage: avg })
           type = 'advice_done'
         }
-      } else {
-        const rows = soFar.slice(-ADVICE_WINDOW)
-        avg = average(rows)
-        if (rows.length === ADVICE_WINDOW && avg < limit) {
-          state.missions[id] = { status: 'active', since: game.end, average: avg, threshold: limit, rounds: (m?.rounds ?? 0) + 1 }
-          type = 'advice_started'
-        }
+      } else if (avg < limit) {
+        state.missions[id] = { status: 'active', since: game.end, average: avg, threshold: limit, rounds: (m?.rounds ?? 0) + 1 }
+        type = 'advice_started'
       }
       if (type) {
         const event = { id: `${type}-${id}-${game.end}`, type, node: id, average: avg, threshold: limit, at: game.end, seen: false }

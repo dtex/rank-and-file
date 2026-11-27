@@ -2,7 +2,6 @@
 import { html, nothing } from 'lit'
 import { View, api, longDay } from './lib.js'
 
-const PRICE = { month: '$5 a month', year: '$50 a year' }
 
 class CbPlan extends View {
   static properties = {
@@ -28,11 +27,13 @@ class CbPlan extends View {
 
   renderOffer(lead) {
     const p = this.plan
-    return html`<p style="margin:6px 0 8px">${lead} Membership is ${PRICE.month} or ${PRICE.year}.</p>
+    const price = p.price
+    return html`<p style="margin:6px 0 8px">${lead} Membership is $${price.month} a month${price.year ? ` or $${price.year} a year` : ''}.
+        ${price.early ? html`<br>That is the early-adopter price for the first subscribers, instead of $${price.full} a month. Once you subscribe it stays yours for as long as you have this account.` : nothing}</p>
       ${p.billing
         ? html`<div class="row">
-            <button class="pri" ?disabled=${this.busy} @click=${() => this.go('/api/billing/checkout', { plan: 'monthly' })}>Subscribe monthly</button>
-            <button ?disabled=${this.busy} @click=${() => this.go('/api/billing/checkout', { plan: 'yearly' })}>Subscribe yearly</button>
+            <button class="pri" ?disabled=${this.busy} @click=${() => this.go('/api/billing/checkout', { plan: 'monthly' })}>${price.year ? 'Subscribe monthly' : 'Subscribe'}</button>
+            ${price.year ? html`<button ?disabled=${this.busy} @click=${() => this.go('/api/billing/checkout', { plan: 'yearly' })}>Subscribe yearly</button>` : nothing}
           </div>
           ${p.source === 'gift' ? html`<p class="muted" style="margin:8px 0 0">You will not be charged until your gift ends.</p>` : nothing}`
         : html`<p class="muted" style="margin:0">Membership is not on sale yet.</p>`}
@@ -46,7 +47,7 @@ class CbPlan extends View {
       const ends = p.cancelAtPeriodEnd
       return html`<div class="mcard" style="margin:0">
         <span class="chip ${p.status === 'past_due' ? 'bad' : 'ok'}">Member</span>
-        <p style="margin:6px 0 8px">${PRICE[p.interval] ?? 'Membership'}${p.until ? html`, ${ends ? 'ends' : 'renews'} ${longDay(p.until)}` : nothing}.
+        <p style="margin:6px 0 8px">${p.price?.[p.interval] ? `$${p.price[p.interval]} a ${p.interval}` : 'Membership'}${p.until ? html`, ${ends ? 'ends' : 'renews'} ${longDay(p.until)}` : nothing}.
           ${p.status === 'past_due' ? html`<br><b>The last payment did not go through.</b> Update your card to keep your membership.` : nothing}</p>
         <button ?disabled=${this.busy} @click=${() => this.go('/api/billing/portal')}>Manage billing</button>
         ${this.error ? html`<p style="color:var(--bad);margin:8px 0 0" role="alert">${this.error}</p>` : nothing}

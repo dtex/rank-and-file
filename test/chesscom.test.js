@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { fetchMonth, isFinished, parseMoves, trimGame } from '../services/chesscom.js'
+import { MAX_PLIES, fetchMonth, isFinished, parseMoves, trimGame } from '../services/chesscom.js'
 import { testStore } from './helpers/db.js'
 import { pullGames } from '../services/sync.js'
 
@@ -30,6 +30,14 @@ test('trimGame keeps moves for standard games only', () => {
   const thematic = trimGame(raw({ initial_setup: 'rnbqkbnr/ppppp1pp/8/5p2/3PP3/8/PPP2PPP/RNBQKBNR b KQkq e3 0 2' }))
   assert.equal(thematic.customStart, true)
   assert.deepEqual(thematic.moves, [])
+})
+
+test('games are trimmed to the first 30 moves, and shorter games are kept whole', () => {
+  const pgn = (n) => `[Result "1-0"]\n\n${Array.from({ length: n }, (_, i) => (i % 2 ? `m${i}` : `${i / 2 + 1}. m${i}`)).join(' ')} 1-0`
+  assert.equal(MAX_PLIES, 60)
+  assert.equal(trimGame(raw({ pgn: pgn(90) })).moves.length, 60)
+  assert.equal(trimGame(raw({ pgn: pgn(90) })).moves.at(-1), 'm59')
+  assert.equal(trimGame(raw({ pgn: pgn(41) })).moves.length, 41)
 })
 
 test('isFinished rejects games that are still being played', () => {

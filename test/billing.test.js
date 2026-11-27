@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto'
 import Stripe from 'stripe'
 import { grantGift } from '../services/entitlement.js'
 import { signIn, testApp, uniqueEmail } from './helpers/app.js'
+import { setEarlyPlaces } from './helpers/db.js'
 
 const WEBHOOK_SECRET = 'whsec_test'
 const ENV = { STRIPE_SECRET_KEY: 'sk_test_x', STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET, STRIPE_PRICE_MONTHLY: 'price_m', STRIPE_PRICE_YEARLY: 'price_y' }
@@ -15,7 +16,7 @@ let seq = 0
 
 /** A stand-in for Stripe's API that remembers subscriptions. Signatures are checked by the real library. */
 function fakeStripe() {
-  const calls = { checkout: [], portal: [], deleted: [] }
+  const calls = { checkout: [], portal: [], deleted: [], prices: [] }
   const subs = new Map()
   const sessions = new Map()
   return {
@@ -32,6 +33,7 @@ function fakeStripe() {
     } },
     subscriptions: { retrieve: async (id) => subs.get(id) },
     billingPortal: { sessions: { create: async (params) => { calls.portal.push(params); return { url: 'https://billing.stripe.test/portal' } } } },
+    prices: { retrieve: async (id) => { calls.prices.push(id); return { id, product: 'prod_membership' } } },
     customers: { del: async (id) => { calls.deleted.push(id) } },
   }
 }
@@ -53,9 +55,10 @@ async function setup() {
   return { ...ctx, stripe }
 }
 
-test('checkout offers $5 a month or $50 a year and carries the user through', async () => {
+test('checkout offers $5 a month or $40 a year and carries the user through', async () => {
   const ctx = await setup()
   const c = await signIn(ctx)
+  assert.deepEqual((await c.get('/api/me')).json().plan.price, { month: 5, year: 40, early: false })
   assert.equal((await c.get('/api/me')).json().plan.billing, true)
 
   const res = await c.post('/api/billing/checkout', { plan: 'yearly' })
@@ -99,6 +102,58 @@ test('a completed checkout makes the user a member, by webhook or on landing bac
   assert.equal((await viaReturn.post('/api/billing/checkout', { plan: 'yearly' })).statusCode, 409)
   assert.equal((await viaReturn.post('/api/billing/portal')).json().url, 'https://billing.stripe.test/portal')
   assert.equal(ctx.stripe.calls.portal[0].customer, sub2.customer)
+})
+
+test('the first 100 subscribers pay $2 a month, with no yearly plan, and keep that price', async (t) => {
+  const ctx = await setup()
+  t.after(() => setEarlyPlaces(ctx.pool, 100))
+  await setEarlyPlaces(ctx.pool, 99)
+  const c = await signIn(ctx)
+  const late = await signIn(ctx)
+  const price = async (who) => (await who.get('/api/me')).json().plan.price
+  const offer = { month: 2, year: null, early: true, full: 5 }
+  assert.deepEqual([await price(c), await price(late)], [offer, offer], 'everyone is offered the last place')
+
+  const early = [{ price_data: { currency: 'usd', product: 'prod_membership', unit_amount: 200, recurring: { interval: 'month' } }, quantity: 1 }]
+  assert.equal((await c.post('/api/billing/checkout', { plan: 'yearly' })).statusCode, 400)
+  await c.post('/api/billing/checkout', { plan: 'monthly' })
+  const sent = ctx.stripe.calls.checkout.at(-1)
+  assert.deepEqual(sent.line_items, early)
+  assert.deepEqual(sent.subscription_data.metadata, { user_id: c.userId, early_adopter: '1' })
+  assert.ok(sent.expires_at - now() <= 3600, 'the offer does not stay open')
+  assert.deepEqual(await price(late), offer, 'starting to pay does not take the place')
+
+  // Paying takes it. The next person is offered the full price; redelivered news does not take a second place.
+  const sub = subscription(c.userId, { metadata: sent.subscription_data.metadata })
+  ctx.stripe.subs.set(sub.id, sub)
+  await webhook(ctx.app, 'customer.subscription.created', sub)
+  await webhook(ctx.app, 'customer.subscription.updated', sub)
+  assert.equal((await ctx.pool.query('select count(*)::int as n from early_adopters')).rows[0].n, 100)
+  assert.deepEqual(await price(c), offer, 'a member sees what they pay')
+  assert.deepEqual(await price(late), { month: 5, year: 40, early: false })
+  await late.post('/api/billing/checkout', { plan: 'yearly' })
+  assert.deepEqual(ctx.stripe.calls.checkout.at(-1).line_items, [{ price: 'price_y', quantity: 1 }])
+  assert.equal('expires_at' in ctx.stripe.calls.checkout.at(-1), false)
+
+  // Cancelling does not give the price up: subscribing again costs the same.
+  Object.assign(sub, { status: 'canceled' })
+  await webhook(ctx.app, 'customer.subscription.deleted', sub)
+  await c.post('/api/billing/checkout', { plan: 'monthly' })
+  assert.deepEqual(ctx.stripe.calls.checkout.at(-1).line_items, early)
+
+  // A member at the full price is not shown the early one, even with places left.
+  const full = subscription(late.userId)
+  ctx.stripe.subs.set(full.id, full)
+  await webhook(ctx.app, 'customer.subscription.created', full)
+  await setEarlyPlaces(ctx.pool, 50)
+  assert.deepEqual(await price(late), { month: 5, year: 40, early: false })
+
+  // A deleted account's place is not handed on.
+  await setEarlyPlaces(ctx.pool, 99)
+  const leaver = await signIn(ctx)
+  await ctx.pool.query('insert into early_adopters (user_id) values ($1)', [leaver.userId])
+  await ctx.pool.query('delete from users where id = $1', [leaver.userId])
+  assert.equal((await price(await signIn(ctx))).early, false)
 })
 
 test('subscription changes follow Stripe: failed payment keeps access, cancelling ends it', async () => {

@@ -4,10 +4,11 @@ import { readFileSync } from 'node:fs'
 import { ADVICE_WINDOW } from '../services/advice.js'
 import { FREE_OPENINGS, RANK_WINDOW } from '../services/missions.js'
 import { APP_PATH, NAV, SITE_NAME, TAGLINE, boardHtml, esc, faq, pipsHtml, sitePage } from '../services/site.js'
+import { EARLY_PLACES, EARLY_PRICE, FULL_PRICE, earlyPlaces, priceFor } from '../services/pricing.js'
 import { DEFAULT_SETTINGS } from '../services/store.js'
 import { TREE_FILE, targetFor } from '../services/tree.js'
 
-const PRICE = { month: '$5', year: '$50' }
+const PRICE = { month: `$${FULL_PRICE.month}`, year: `$${FULL_PRICE.year}` }
 
 const tree = JSON.parse(readFileSync(TREE_FILE, 'utf8'))
 const OPENINGS = tree.filter((n) => n.moves).length
@@ -16,7 +17,6 @@ const target = (n) => n.target ?? targetFor(n.moves.split(/\s+/).length)
 const TARGET_MAX = targetFor(1)
 const TARGET_MIN = targetFor(99)
 const THRESHOLD = DEFAULT_SETTINGS.adviceThreshold
-const roman = ['i', 'ii', 'iii', 'iv', 'v', 'vi']
 
 /** An opening as the map draws it: a captioned diagram with its progress. */
 function tile(id, status, count) {
@@ -39,8 +39,8 @@ const software = (config) => ({
   description: 'Chess opening training that sets opening missions and tracks them against your own chess.com and Lichess games.',
   offers: [
     { '@type': 'Offer', name: 'Free', price: '0', priceCurrency: 'USD', description: `${FREE_OPENINGS} openings` },
-    { '@type': 'Offer', name: 'Membership, monthly', price: '5.00', priceCurrency: 'USD' },
-    { '@type': 'Offer', name: 'Membership, yearly', price: '50.00', priceCurrency: 'USD' },
+    { '@type': 'Offer', name: 'Membership, monthly', price: FULL_PRICE.month.toFixed(2), priceCurrency: 'USD' },
+    { '@type': 'Offer', name: 'Membership, yearly', price: FULL_PRICE.year.toFixed(2), priceCurrency: 'USD' },
   ],
 })
 
@@ -81,7 +81,7 @@ const FEATURES_FAQ = [
   ['What is advice accuracy?',
     `Advice accuracy is the percentage of an opening's ideas you followed in one game. Each opening lists a few ideas, such as developing a piece or not bringing the queen out early, and every game that reaches the opening is checked against them move by move. Ideas that did not come up in a game are left out of its score.`],
   ['What is an advice mission?',
-    `An advice mission is a short task to follow an opening's ideas more closely. You get one when your last ${ADVICE_WINDOW} scored games in an opening average below your target, which starts at ${THRESHOLD}%. To complete it, average the target or better over ${ADVICE_WINDOW} new games. You can change the target, or switch advice missions off, in Settings.`],
+    `An advice mission is a short task to follow an opening's ideas more closely. You get one when your last ${ADVICE_WINDOW} scored games in an opening average below your target, which starts at ${THRESHOLD}%. To complete it, bring the average of your last ${ADVICE_WINDOW} games back up to the target. You can change the target, or switch advice missions off, in Settings.`],
   ['Which of my chess.com and Lichess games count toward a mission?',
     `By default, rated blitz, rapid and daily games count, from either site. You can add bullet, drop any time control, or include unrated games in Settings. On Lichess, correspondence games count as daily, classical as rapid and ultrabullet as bullet. Chess960 games and games that start from a set position, such as thematic tournaments, never count.`],
   ['Why did one of my games not count?',
@@ -95,6 +95,10 @@ const FEATURES_FAQ = [
 const PRICING_FAQ = [
   ['How much does Rank and File cost?',
     `Rank and File is free for your first ${FREE_OPENINGS} openings. A membership costs ${PRICE.month} a month or ${PRICE.year} a year and opens all ${OPENINGS} openings on the map.`],
+  ['What is the early-adopter price?',
+    `The first ${EARLY_PLACES} people to subscribe pay $${EARLY_PRICE.month} a month instead of ${PRICE.month}. The early-adopter price is paid by the month; there is no yearly plan at that price. A free account does not hold a place: the price becomes yours when you subscribe.`],
+  ['How long do I keep the early-adopter price?',
+    `For as long as you have your account. The price does not go up at renewal, and it is still yours if you cancel and subscribe again later. It ends only if you delete your account.`],
   ['What do I get for free?',
     `A free account has every feature of the app: missions, the map, advice accuracy, advice missions and the game log. The only limit is the number of openings: the two you start with and two more.`],
   ['Can I cancel my membership?',
@@ -128,9 +132,9 @@ function home(config) {
     <section class="section">
       <h2>How it works</h2>
       <ol class="steps">
-        <li><b>i</b><div><h3>Tell it where you play</h3><p>Sign in with Google, GitHub or a link sent to your email, then enter your username on chess.com, Lichess or both. Rank and File reads the finished games those sites publish for it. It never asks for a password to either.</p></div></li>
-        <li><b>ii</b><div><h3>Play your normal games</h3><p>You have one mission for White and one for Black. Every game that reaches your mission opening counts, win or lose, and is scored on how well you followed that opening's ideas.</p></div></li>
-        <li><b>iii</b><div><h3>Uncover the next opening</h3><p>Complete a mission and a new opening appears on your map: the one your own games reach most often. You always study what you actually face.</p></div></li>
+        <li><b>1</b><div><h3>Tell it where you play</h3><p>Sign in with Google, GitHub or a link sent to your email, then enter your username on chess.com, Lichess or both. Rank and File reads the finished games those sites publish for it. It never asks for a password to either.</p></div></li>
+        <li><b>2</b><div><h3>Play your normal games</h3><p>You have one mission for White and one for Black. Every game that reaches your mission opening counts, win or lose, and is scored on how well you followed that opening's ideas.</p></div></li>
+        <li><b>3</b><div><h3>Uncover the next opening</h3><p>Complete a mission and a new opening appears on your map: the one your own games reach most often. You always study what you actually face.</p></div></li>
       </ol>
     </section>
 
@@ -150,10 +154,10 @@ function home(config) {
     <section class="section cols">
       <div><h3>A few ideas, not pages of theory</h3><p>Each opening comes with a handful of plain ideas: which piece to develop, which pawn to defend, what not to do. That is all you are asked to remember.</p></div>
       <div><h3>Scored on what you played</h3><p>Every game that reaches an opening gets an advice accuracy percentage, with a line for each idea saying whether you followed it.</p></div>
-      <div><h3>Help where you slip</h3><p>If your accuracy in an opening drops below your target, you get a short advice mission to bring it back up over ${ADVICE_WINDOW} games.</p></div>
+      <div><h3>Help where you slip</h3><p>If your accuracy in an opening drops below your target, you get a short advice mission to bring it back up.</p></div>
       <div><h3>Nothing to sell but the app</h3><p>No advertising, no trackers and no passwords. You can download or delete your data at any time.</p></div>
     </section>
-    <p class="actions"><a class="btn" href="/features">All features</a> <a class="btn" href="/pricing">Pricing</a></p>
+    <p class="actions center"><a class="btn" href="/features">All features</a> <a class="btn" href="/pricing">Pricing</a></p>
 
     ${questions.html}
 
@@ -202,12 +206,12 @@ function features(config) {
        <p>If your opponents keep answering 1.e4 with the Sicilian, the Sicilian is what you study next.</p>`)}
     ${feature('Ideas', 'A few ideas for each opening',
       `<p>Each opening has a study page with its position, the moves that reach it, and a short list of ideas written for players who do not want to memorise theory. These are the ideas for the ${esc(open.name)}, played as Black:</p>`,
-      `<ol class="ideas">${open.ideas.map((t, i) => `<li><b>${roman[i]}</b><div>${esc(t)}</div></li>`).join('')}</ol>`)}
+      `<ol class="ideas">${open.ideas.map((t, i) => `<li><b>${i + 1}</b><div>${esc(t)}</div></li>`).join('')}</ol>`)}
     ${feature('Advice accuracy', 'A score for every game',
       `<p>Once you have uncovered an opening, every game that reaches it with your colour is scored on how well you followed its ideas, as a percentage. Select the score in the game log to see, idea by idea, what you followed and what you did not.</p>
        <p>Ideas that did not come up, or that the game ended too soon to judge, are left out of the score.</p>`)}
     ${feature('Advice missions', 'Extra practice where you need it',
-      `<p>If your last ${ADVICE_WINDOW} scored games in an opening average below your target (${THRESHOLD}% to start with), you get an advice mission for it: average the target or better over ${ADVICE_WINDOW} new games. It runs beside your two opening missions.</p>
+      `<p>If your last ${ADVICE_WINDOW} scored games in an opening average below your target (${THRESHOLD}% to start with), you get an advice mission for it: bring the average of your last ${ADVICE_WINDOW} games back up to the target. It runs beside your two opening missions.</p>
        <p>You can raise or lower the target in Settings, or switch advice missions off.</p>`)}
     ${feature('The game log', 'A reason for every game',
       `<p>Each game is listed with its result and a verdict: counted, your opponent left the line, you left the line, ended early, or not eligible. Where someone left the line, the log shows the move that was played and the move the opening needed.</p>`)}
@@ -220,7 +224,7 @@ function features(config) {
       `<p>Choose which time controls count toward missions: bullet, blitz, rapid and daily. Count rated games only, or unrated ones too. Chess960 and games from a set position never count.</p>`)}
     ${feature('Privacy', 'No passwords, no trackers',
       `<p>You sign in with Google, GitHub or an emailed link, so there is no password to lose. There is no advertising and no analytics tracking. You can download everything held about you, or delete your account, in Settings. The <a href="/privacy">privacy policy</a> has the full list.</p>`)}
-    <p class="actions">${cta()} <a class="btn" href="/pricing">See pricing</a></p>
+    <p class="actions aside">${cta()} <a class="btn" href="/pricing">See pricing</a></p>
 
     ${questions.html}`
   return sitePage({
@@ -230,13 +234,14 @@ function features(config) {
   })
 }
 
-function pricing(config, onSale) {
+function pricing(config, onSale, offer) {
   const questions = faq('Questions about pricing', PRICING_FAQ)
+  const month = `$${offer.month}`
   const body = `
     <section class="lead solo">
       <div>
         <div class="caps kicker">Pricing</div>
-        <h1>Free to start, ${PRICE.month} a month for the whole map</h1>
+        <h1>Free to start, ${month} a month for the whole map</h1>
         <p class="stand">Every feature is in the free plan. Membership only changes how many openings you can uncover.</p>
       </div>
     </section>
@@ -256,12 +261,15 @@ function pricing(config, onSale) {
       </div>
       <div class="box">
         <h2 class="eyebrow">Membership</h2>
-        <p class="pull">${PRICE.month}<small> a month</small></p>
-        <p>Or ${PRICE.year} a year, which is two months free.</p>
+        <p class="pull">${month}<small> a month</small></p>
+        <p>${offer.early
+          ? `The early-adopter price for the first ${EARLY_PLACES} subscribers, yours for good. After the first ${EARLY_PLACES} subscribers it's ${PRICE.month} a month or ${PRICE.year} a year.`
+          : `Or ${PRICE.year} a year, which is ${12 - FULL_PRICE.year / FULL_PRICE.month} months free.`}</p>
         <ul>
           <li>All ${OPENINGS} openings on the map</li>
           <li>Everything in the free plan</li>
-          <li>Cancel at any time; you keep what you paid for</li>
+          <li>Cancel at any time; you keep what you paid for</li>${offer.early ? `
+          <li>Subscribe while the early price lasts and it stays yours</li>` : ''}
           <li>Progress is kept if you stop, and returns if you come back</li>
         </ul>
         <p class="actions">${cta('Start free, upgrade later')}</p>
@@ -273,17 +281,23 @@ function pricing(config, onSale) {
     ${questions.html}`
   return sitePage({
     config, path: '/pricing', title: 'Pricing',
-    description: `${SITE_NAME} is free for your first ${FREE_OPENINGS} chess openings. Membership is ${PRICE.month} a month or ${PRICE.year} a year for all ${OPENINGS}.`,
+    description: `${SITE_NAME} is free for your first ${FREE_OPENINGS} chess openings. Membership is ${PRICE.month} a month or ${PRICE.year} a year for all ${OPENINGS}${offer.early ? `, or $${offer.month} a month for the first ${EARLY_PLACES} subscribers` : ''}.`,
     body, data: [software(config), questions.data],
   })
 }
 
 export default async function siteRoutes(app) {
-  const { config, billing } = app.ctx
+  const { config, billing, pool } = app.ctx
   const html = (reply, page) => reply.type('text/html').header('Cache-Control', 'public, max-age=300').send(page)
   // The pages do not change while the server runs, so each is built once.
-  const pages = { '/': home(config), '/features': features(config), '/pricing': pricing(config, billing.enabled) }
+  const pages = { '/': home(config), '/features': features(config) }
   for (const [path, page] of Object.entries(pages)) app.get(path, async (req, reply) => html(reply, page))
+  // Pricing shows the price a new subscriber would get: early while those places last, full after.
+  const pricingPages = {}
+  app.get('/pricing', async (req, reply) => {
+    const offer = priceFor(await earlyPlaces(pool))
+    return html(reply, pricingPages[offer.month] ??= pricing(config, billing.enabled, offer))
+  })
 
   app.get(APP_PATH, async (req, reply) => reply.sendFile('app.html'))
   app.get(`${APP_PATH}/`, async (req, reply) => reply.redirect(301, APP_PATH))

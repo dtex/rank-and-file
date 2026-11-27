@@ -110,7 +110,7 @@ test('the privacy policy and terms are public, and every page carries the securi
   assert.match(privacy.body, /\[data location not set\]/, 'a missing detail is shown as a gap')
   const terms = await app.inject({ url: '/terms' })
   assert.equal(terms.statusCode, 200)
-  assert.match(terms.body, /\$5 a month or \$50 a year/)
+  assert.match(terms.body, /\$5 a month or \$40 a year/)
 
   for (const res of [privacy, await app.inject({ url: '/' }), await app.inject({ url: '/app' }), await app.inject({ url: '/api/me' })]) {
     assert.match(res.headers['content-security-policy'], /default-src 'self'/)

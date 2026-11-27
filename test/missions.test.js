@@ -128,6 +128,21 @@ test('nobody can choose a hidden opening, not even a fog tile next to their map'
   assert.deepEqual(p, before)
 })
 
+test('the map view lists the moves an opening skips past its parent', () => {
+  const view = stateView(tree, fresh(), [])
+  for (const n of view.nodes.slice(1)) {
+    const node = tree.byId.get(n.id)
+    const gap = node.depth - tree.byId.get(node.parent).depth - 1
+    assert.equal(n.via.length, gap, n.id)
+  }
+  // Van't Kruijs is Black's 1...e5 straight under the starting position: White's 1.e3 is the move in between.
+  const hidden = stateView(tree, fresh(), []).fog.find((f) => f.fid === fogId('vantkruijs'))
+  assert.equal(hidden.skip, 1)
+  const p = fresh()
+  p.missions.vantkruijs = { status: 'parked', games: [] }
+  assert.deepEqual(stateView(tree, p, []).nodes.find((n) => n.id === 'vantkruijs').via, ['1.e3'])
+})
+
 test('the map view never names a hidden opening', () => {
   const p = fresh()
   const hidden = game('e4 c5 Nf3', { as: 'w' })
@@ -139,7 +154,7 @@ test('the map view never names a hidden opening', () => {
   assert.deepEqual(view.latest[0].opening, { hidden: true })
   assert.ok(view.fog.length > 0)
   const tile = view.fog.find((f) => f.fid === fogId('sicilian'))
-  assert.deepEqual(tile, { fid: fogId('sicilian'), parent: 'kp', side: 'b' })
+  assert.deepEqual(tile, { fid: fogId('sicilian'), parent: 'kp', side: 'b', skip: 0 })
   assert.equal(openingView(tree, p, [hidden], 'sicilian'), null)
 })
 
@@ -152,4 +167,14 @@ test('opening view reports reach rate and where other games went', () => {
   assert.equal(v.stats.of, 4)
   assert.deepEqual(v.stats.elsewhere, [{ move: '1.d4', mine: true, count: 2 }])
   assert.deepEqual(v.yourMoves, ['1.e4'])
+})
+
+test('the opening page carries the history, one entry per paragraph', () => {
+  const p = fresh()
+  const v = openingView(tree, p, [], 'kp')
+  assert.deepEqual(v.history, tree.byId.get('kp').history.split('\n\n'))
+  assert.ok(v.history.length >= 1 && v.history.every((para) => para && !para.includes('\n')))
+  // An opening without one gets an empty list, so the page leaves the section out.
+  const bare = { ...tree, byId: new Map([...tree.byId, ['kp', { ...tree.byId.get('kp'), history: undefined }]]) }
+  assert.deepEqual(openingView(bare, p, [], 'kp').history, [])
 })

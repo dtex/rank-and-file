@@ -4,8 +4,11 @@ const BASE = 'https://api.chess.com/pub'
 const USER_AGENT = process.env.CHESSCOM_USER_AGENT || 'rank-and-file/1.0 (opening tracker)'
 const STANDARD_START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
-/** How many plies of each game are kept. Openings are decided well before this. */
-export const MAX_PLIES = 30
+/**
+ * How many plies of each game are kept: the first 30 moves, which covers the opening and the
+ * early middlegame. Games stored when this was lower are fetched again once (services/sync.js).
+ */
+export const MAX_PLIES = 60
 
 let queue = Promise.resolve()
 /** Run `fn` after every request queued before it has finished, whatever its outcome. */

@@ -1,6 +1,6 @@
 import { loadState, locked } from '../services/engine.js'
 import { switchMission } from '../services/missions.js'
-import { gamesView, openingView, openingsView, stateView } from '../services/views.js'
+import { gamesView, openingView, stateView } from '../services/views.js'
 
 export default async function missionRoutes(app) {
   app.get('/api/state', (req) => locked(req.cb.store, async () => {
@@ -11,11 +11,6 @@ export default async function missionRoutes(app) {
   app.get('/api/games', (req) => locked(req.cb.store, async () => {
     const { tree, progress, games } = await loadState(req.cb)
     return gamesView(tree, progress, games)
-  }))
-
-  app.get('/api/openings', (req) => locked(req.cb.store, async () => {
-    const { tree, progress } = await loadState(req.cb)
-    return openingsView(tree, progress)
   }))
 
   app.get('/api/openings/:id', (req, reply) => locked(req.cb.store, async () => {

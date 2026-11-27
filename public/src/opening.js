@@ -3,24 +3,6 @@ import { View, accuracy, adviceDetail, api, board, day, resultWord, sideName, ti
 
 const STATUS = { active: 'Active mission', parked: 'Parked mission', done: 'Complete', hidden: 'Admin view, still hidden', locked: 'Admin view, locked' }
 
-class CbOpenings extends View {
-  static properties = { version: {}, data: { state: true } }
-
-  willUpdate(changed) {
-    if (changed.has('version')) api('/api/openings').then((d) => (this.data = d))
-  }
-
-  render() {
-    if (!this.data) return html`<div class="page"><p class="muted">Loading…</p></div>`
-    const { openings } = this.data
-    return html`<div class="page">
-      <div><h2>Openings</h2><p class="stand">Everything you have uncovered so far. Open one for its ideas and your record.</p></div>
-      <div class="cards">${openings.map((n) => tile(n))}</div>
-    </div>`
-  }
-}
-customElements.define('cb-openings', CbOpenings)
-
 class CbOpening extends View {
   static properties = { openingId: {}, version: {}, data: { state: true }, error: { state: true } }
 
@@ -39,7 +21,7 @@ class CbOpening extends View {
   }
 
   render() {
-    if (this.error) return html`<div class="page"><div><p>${this.error}</p><p><a href="#map">Back to the map</a></p></div></div>`
+    if (this.error) return html`<div class="page"><div><p>${this.error}</p><p><a href="#openings">Back to your openings</a></p></div></div>`
     const o = this.data
     if (!o) return html`<div class="page"><p class="muted">Loading…</p></div>`
     const s = o.stats
@@ -47,10 +29,13 @@ class CbOpening extends View {
     const pct = s.of ? Math.round((s.reached / s.of) * 100) : 0
     const a = o.advice
     const am = a.mission?.status === 'active' ? a.mission : null
-    const numeral = ['i', 'ii', 'iii', 'iv', 'v', 'vi']
+    const r = s.byRating
+    const rated = r.weaker.games + r.even.games + r.stronger.games
+    const band = (label, b, bad = false) => html`<tr class=${bad ? 'bad' : ''}><td>${label}</td><td>${b.games}</td>
+      ${b.games ? html`<td>${b.win}–${b.draw}–${b.loss}</td><td>${b.score}%</td>` : html`<td class="na">–</td><td class="na">–</td>`}</tr>`
     const list = (xs) => xs.join(', ').replace(/, ([^,]*)$/, ' and $1')
     return html`<div class="page"><article class="article">
-      <p><a class="caps" href="#map">← The map</a></p>
+      <p><a class="caps" href="#openings">← Openings</a></p>
       <div class="caps kicker">${STATUS[o.status]} · ${o.count} of ${o.target}</div>
       <h2>${o.name}</h2>
       <p class="stand">${o.blurb}</p>
@@ -62,7 +47,7 @@ class CbOpening extends View {
         <div>
           <p class="mvline"><b>Your moves</b> are ${list(o.yourMoves)}.${o.theirMoves.length
             ? html` <b>Your opponent has to play</b> ${list(o.theirMoves)}.` : nothing}</p>
-          <ol class="ideas">${o.ideas.map((i, n) => html`<li><b>${numeral[n] ?? n + 1}</b><span>${i.text}
+          <ol class="ideas">${o.ideas.map((i, n) => html`<li><b>${n + 1}</b><span>${i.text}
             ${i.of ? html`<small class=${i.followed === i.of ? '' : 'bad'} title="Games where this came up, out of your last ${a.games} scored here">Followed in ${i.followed} of ${i.of} games</small>` : nothing}</span></li>`)}</ol>
           <div class="links caps">
             <a href=${o.links.chesscom} target="_blank" rel="noopener">Open position on chess.com</a>
@@ -79,10 +64,23 @@ class CbOpening extends View {
             <tr><td>Lost</td><td>${s.record.loss}</td></tr>
             <tr><td>Advice accuracy${a.games ? `, last ${a.games}` : ''}</td><td>${a.average === null ? '–' : accuracy(a.average, a.threshold)}</td></tr>
           </table>
+          ${rated
+            ? html`<h4>By opponent rating</h4>
+                <table class="bands">
+                  <tr><th>Opponents</th><th>Games</th><th title="Won, drawn, lost">W–D–L</th><th>Score</th></tr>
+                  ${band('Weaker', r.weaker)}${band('Your level', r.even)}${band('Stronger', r.stronger, r.struggling)}
+                </table>
+                <p class="fine" style="margin-top:8px">Weaker and stronger mean more than ${r.band} points below or above your rating in that game.
+                  ${r.unrated ? `${r.unrated} game${r.unrated === 1 ? '' : 's'} against unrated opponents, such as the computer, ${r.unrated === 1 ? 'is' : 'are'} left out.` : ''}</p>
+                ${s.trend
+                  ? html`<p class="trend">Your last ${s.trend.window} games here scored <b class=${s.trend.recent < s.trend.before ? 'down' : ''}>${s.trend.recent}%</b>,
+                      ${s.trend.recent < s.trend.before ? `down from ${s.trend.before}%` : s.trend.recent > s.trend.before ? `up from ${s.trend.before}%` : 'the same as'} in the ${s.trend.window} before.</p>`
+                  : nothing}`
+            : nothing}
           ${am
             ? html`<h4 class="kicker">Advice mission</h4>
-                <p>Your last ${am.of} games here averaged ${am.startAverage}%. Average ${am.threshold}% or better over ${am.of} new games.
-                  ${am.played ? `${am.played} played so far, at ${am.current}%.` : 'None played yet.'}</p>`
+                <p>Your last ${am.of} games here averaged ${am.startAverage}%. Bring the average of your last ${am.of} back up to ${am.threshold}%.
+                  ${am.played ? `${am.played} played since, and it stands at ${am.current}%.` : 'None played since.'}</p>`
             : a.average === null
               ? html`<p class="fine" style="margin-top:10px">Scored on games you finish after uncovering this opening, when its advice comes up.</p>`
               : nothing}
@@ -95,6 +93,11 @@ class CbOpening extends View {
             : nothing}
         </aside>
       </div>
+
+      ${o.history.length
+        ? html`<div class="section history"><div class="rule">History</div>
+            ${o.history.map((p) => html`<p>${p}</p>`)}</div>`
+        : nothing}
 
       ${o.children.length || o.hiddenChildren
         ? html`<div class="section"><div class="rule">From here</div>

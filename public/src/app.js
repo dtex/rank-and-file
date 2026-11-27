@@ -1,12 +1,12 @@
 import { html, nothing } from 'lit'
-import { APP_PATH, TAGLINE, View, api, ago, board, sideName, wordmark } from './lib.js'
-import './map.js'
+import { APP_PATH, TAGLINE, View, api, ago, board, sideName, siteName, wordmark } from './lib.js'
+import './openings.js'
 import './settings.js'
 import './games.js'
 import './opening.js'
 import './account.js'
 
-const TABS = [['map', 'Map'], ['games', 'Games'], ['openings', 'Openings'], ['settings', 'Settings']]
+const TABS = [['openings', 'Openings'], ['games', 'Games'], ['settings', 'Settings']]
 const SYNC_EVERY_MS = 5 * 60 * 1000
 
 class CbApp extends View {
@@ -31,7 +31,8 @@ class CbApp extends View {
   readRoute() {
     const h = location.hash.slice(1)
     if (h.startsWith('opening-')) return { name: 'opening', id: h.slice(8) }
-    return { name: TABS.some(([t]) => t === h) ? h : 'map' }
+    // #map was the map's own screen before it moved to Openings; old links still land there.
+    return { name: TABS.some(([t]) => t === h) ? h : 'openings' }
   }
 
   async connectedCallback() {
@@ -113,10 +114,16 @@ class CbApp extends View {
       const r = await api('/api/sync', { method: 'POST' })
       const state = await api('/api/state')
       this.setState(state, this.state ? state.nodes.filter((n) => !before.has(n.id)).map((n) => n.id) : [])
+      // Older games that were fetched again to keep more of their moves. Said even on a quiet sync: it explains the wait.
+      const reread = r.lengthened
+        ? `Your ${r.lengthened.toLocaleString()} older game${r.lengthened === 1 ? ' was' : 's were'} read again, up to move ${r.movesKept}.`
+        : ''
       if (r.problem) {
-        this.notice = { err: true, text: `${r.added ? `${r.added} new game${r.added === 1 ? '' : 's'}, but one site could not be read. ` : ''}${r.problem}` }
+        this.notice = { err: true, text: `${r.added ? `${r.added} new game${r.added === 1 ? '' : 's'}, but one site could not be read. ` : ''}${reread} ${r.problem}`.trim() }
       } else if (r.added) {
-        this.notice = { text: `${r.added} new game${r.added === 1 ? '' : 's'}, ${r.counted} counted toward a mission.` }
+        this.notice = { text: `${r.added} new game${r.added === 1 ? '' : 's'}, ${r.counted} counted toward a mission. ${reread}`.trim() }
+      } else if (reread) {
+        this.notice = { text: reread }
       } else if (!quiet) {
         this.notice = { text: 'No new games since the last sync.' }
       }
@@ -127,7 +134,14 @@ class CbApp extends View {
     }
   }
 
-  async dismissEvent(event, to = 'map') {
+  /** When the last sync was or, during the one slow sync that fetches older games again, what is taking the time. */
+  syncStatus() {
+    const behind = this.state.catchingUp
+    if (!this.syncing || !behind) return `synced ${ago(this.state.lastSync)}`
+    return `reading older ${behind.site ? `${siteName(behind.site)} ` : ''}games again, once`
+  }
+
+  async dismissEvent(event, to = 'openings') {
     try {
       this.setState(await api('/api/events/seen', { method: 'POST', body: { ids: [event.id] } }))
     } catch (err) {
@@ -153,10 +167,10 @@ class CbApp extends View {
                   ? html`<p class="muted" style="margin-bottom:4px">What slipped:</p>
                       <ul style="margin:0 0 12px;padding-left:20px">${event.missed.map((i) => html`<li>${i.text} <span class="muted">followed ${i.followed} of ${i.of}</span></li>`)}</ul>`
                   : nothing}
-                <p class="muted">Mission: average ${event.threshold}% or better over your next ${event.of} games here. Your opening missions carry on as usual.</p>`
-            : html`<p style="margin-top:12px">Your last ${event.of} games here averaged ${event.average}%, above the ${event.threshold}% target.</p>`}
+                <p class="muted">Mission: bring the average of your last ${event.of} games here back up to ${event.threshold}%. Your opening missions carry on as usual.</p>`
+            : html`<p style="margin-top:12px">Your last ${event.of} games here averaged ${event.average}%, back up to the ${event.threshold}% target.</p>`}
           <div class="row">
-            <button class="pri" @click=${() => this.dismissEvent(event)}>Back to the map</button>
+            <button class="pri" @click=${() => this.dismissEvent(event)}>Back to your openings</button>
             <button @click=${() => this.dismissEvent(event, `opening-${node.id}`)}>${started ? 'Study it' : 'See the games'}</button>
           </div>
         </div>
@@ -184,17 +198,17 @@ class CbApp extends View {
                 <p class="stand" style="font-size:19px;margin-top:12px">${next.blurb}</p>
                 <p class="muted">${next.isActive ? 'Your new mission' : 'Mission'}: reach this position ${next.target} times as ${sideName(next.side)}. ${odds}</p>
                 <div class="row">
-                  <button class="pri" @click=${() => this.dismissEvent(event)}>Back to the map</button>
+                  <button class="pri" @click=${() => this.dismissEvent(event)}>Back to your openings</button>
                   <button @click=${() => this.dismissEvent(event, `opening-${next.id}`)}>Study it</button>
                 </div>
                 <p class="muted" style="margin-top:12px">It was chosen because, of the hidden ${sideName(next.side)} openings next to your map, it is the one your recent games reach most.</p>`
             : event.paywall
               ? html`<h3 style="margin-top:16px">That was your last free opening</h3>
                 <p>You have uncovered all ${this.state.plan.freeOpenings} free openings, and they stay yours to play. A membership uncovers the rest of the map.</p>
-                <button class="pri" @click=${() => this.dismissEvent(event)}>Back to the map</button>`
+                <button class="pri" @click=${() => this.dismissEvent(event)}>Back to your openings</button>`
             : html`<h3 style="margin-top:16px">Nothing left to uncover from here</h3>
                 <p>There are no more hidden ${sideName(node.side)} openings next to your map. More open up as your ${sideName(node.side === 'w' ? 'b' : 'w')} missions progress.</p>
-                <button class="pri" @click=${() => this.dismissEvent(event)}>Back to the map</button>`}
+                <button class="pri" @click=${() => this.dismissEvent(event)}>Back to your openings</button>`}
         </div>
       </div>
     </div>`
@@ -207,12 +221,10 @@ class CbApp extends View {
         return html`<cb-settings .me=${this.me}></cb-settings>`
       case 'games':
         return html`<cb-games .version=${this.version}></cb-games>`
-      case 'openings':
-        return html`<cb-openings .version=${this.version}></cb-openings>`
       case 'opening':
         return html`<cb-opening .openingId=${this.route.id} .version=${this.version}></cb-opening>`
       default:
-        return html`<cb-map .state=${this.state} .fresh=${this.fresh}></cb-map>`
+        return html`<cb-openings .state=${this.state} .fresh=${this.fresh}></cb-openings>`
     }
   }
 
@@ -228,10 +240,10 @@ class CbApp extends View {
         <div class="dl caps">
           <span>${new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
           <span class="sp"></span>
-          ${this.state ? html`<span>${this.state.accounts} · synced ${ago(this.state.lastSync)}</span>` : nothing}
+          ${this.state ? html`<span>${this.state.accounts} · ${this.syncStatus()}</span>` : nothing}
           <button class="link" ?disabled=${this.syncing} @click=${() => this.sync()}>${this.syncing ? 'Checking…' : 'Check for new games'}</button>
         </div>
-        ${wordmark('#map')}
+        ${wordmark('#openings')}
         <div class="tagline">${TAGLINE}</div>
         <nav class="tabs caps">${TABS.map(([id, label]) => html`<a class="tab ${tab === id ? 'on' : ''}" href="#${id}">${label}</a>`)}</nav>
       </header>
